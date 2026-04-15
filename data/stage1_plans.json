@@ -1,0 +1,193 @@
+{
+  "version": 6,
+  "plans": [
+    {
+      "id": "stage1_pushA", "name": "推A", "icon": "🏋️", "stage": "stage1",
+      "modules": [
+        {
+          "name": "热身放松", "icon": "🧘", "type": "warmup",
+          "exercises": [
+            { "name": "泡沫轴：胸大肌、三角肌前束", "mode": "timed", "duration": 60, "tip": "寻找痛点施加压迫直至松滑，解除上半身圆肩，为下肢承重扫除代偿。", "equipment": ["泡沫轴"] },
+            { "name": "泡沫轴：左侧小腿三头肌", "mode": "timed", "duration": 60, "tip": "松解小腿后侧筋膜，改善踝关节背屈活动度。", "equipment": ["泡沫轴"] }
+          ]
+        },
+        {
+          "name": "拉伸", "icon": "🤸", "type": "stretch",
+          "exercises": [
+            { "name": "胸大肌门框被动拉伸", "mode": "counted", "sets": 2, "reps": "30秒", "tip": "靠墙微蹲被动分泌滑液，润滑关节。" },
+            { "name": "双侧靠墙微蹲滑动 (0-45度)", "mode": "counted", "sets": 2, "reps": "15次", "tip": "控制角度在0-45度范围内，感受膝关节渐进润滑。" }
+          ]
+        },
+        {
+          "name": "激活", "icon": "⚡", "type": "activate",
+          "exercises": [
+            { "name": "坐姿肩部 Y-T-W 激活", "mode": "counted", "sets": 1, "reps": "各10次", "tip": "Y-T-W三方向激活肩胛稳定肌群，为推类动作预热。" },
+            { "name": "弹力带西班牙深蹲 (静力)", "mode": "counted", "sets": 2, "reps": "45秒", "tip": "西班牙深蹲利用粗弹力带消除髌股向下压力，安全唤醒股四头肌。", "equipment": ["弹力带"] }
+          ]
+        },
+        {
+          "name": "主训 A", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "A1. 哑铃平板卧推", "mode": "counted", "sets": 4, "reps": "8-12", "tip": "卧推禁忌腿部借力，专注胸大肌收缩。", "restBetweenSets": 90, "equipment": ["哑铃","卧推凳"] },
+            { "name": "A2. 左腿BFR血流限制伸展", "mode": "counted", "sets": 4, "reps": "30-15-15-15", "tip": "腿屈伸绑BFR带，使用20-30% 1RM极轻重量，交替进行。", "restBetweenSets": 45, "sides": "left", "equipment": ["BFR带","腿屈伸机"] }
+          ]
+        },
+        {
+          "name": "主训 B", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "B1. 坐姿/半跪姿地雷管推举", "mode": "counted", "sets": 3, "reps": "8-12/侧", "tip": "地雷管推举解除脊柱垂直压迫，肩关节更安全。", "restBetweenSets": 90, "equipment": ["地雷管"] },
+            { "name": "B2. 史密斯机双腿垫高提踵", "mode": "counted", "sets": 3, "reps": "15-20", "tip": "提踵拉伸跟腱，加速小腿消肿。", "restBetweenSets": 60, "equipment": ["史密斯机"] }
+          ]
+        },
+        {
+          "name": "孤立核心", "icon": "🎯", "type": "core",
+          "exercises": [
+            { "name": "C1. 坐姿哑铃侧平举", "mode": "counted", "sets": 3, "reps": "15-20", "tip": "非承重状态下榨干三角肌中束。", "restBetweenSets": 60, "equipment": ["哑铃"] },
+            { "name": "C2. 仰卧死虫式 (核心抗伸展)", "mode": "counted", "sets": 3, "reps": "12/侧", "tip": "强化核心刚性，防止腰椎代偿伸展。", "restBetweenSets": 45 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage1_pullA", "name": "拉A", "icon": "🧗", "stage": "stage1",
+      "modules": [
+        {
+          "name": "热身放松", "icon": "🧘", "type": "warmup",
+          "exercises": [
+            { "name": "泡沫轴：背阔肌、胸腰筋膜", "mode": "timed", "duration": 60, "tip": "松解痉挛的后侧筋膜，恢复腘绳肌弹性。", "equipment": ["泡沫轴"] },
+            { "name": "泡沫轴：左侧腘绳肌、臀大肌", "mode": "timed", "duration": 60, "tip": "松解后侧筋膜链，恢复腘绳肌动态弹性。", "equipment": ["泡沫轴"] }
+          ]
+        },
+        {
+          "name": "拉伸", "icon": "🤸", "type": "stretch",
+          "exercises": [
+            { "name": "猫牛式脊柱动态伸展", "mode": "counted", "sets": 1, "reps": "15次", "tip": "逐节活动脊柱，建立椎间关节活动度。" },
+            { "name": "仰卧弹力带左腿直腿拉伸 (PNF)", "mode": "counted", "sets": 2, "reps": "30秒", "tip": "PNF收缩放松法最大化左侧腘绳肌延展度。", "equipment": ["弹力带"] }
+          ]
+        },
+        {
+          "name": "激活", "icon": "⚡", "type": "activate",
+          "exercises": [
+            { "name": "仰卧双腿桥式起", "mode": "counted", "sets": 2, "reps": "15次", "tip": "桥式唤醒臀大肌，建立髋伸展发力模式。" },
+            { "name": "跪姿肩胛骨俯卧撑", "mode": "counted", "sets": 1, "reps": "15次", "tip": "肩胛预热拉力动作，激活前锯肌。" }
+          ]
+        },
+        {
+          "name": "主训 A", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "A1. 胸部支撑哑铃划船", "mode": "counted", "sets": 4, "reps": "8-12", "tip": "划船解除腰椎负荷，专注背部收缩。", "restBetweenSets": 90, "equipment": ["哑铃","划船凳"] },
+            { "name": "A2. 轻杠铃/哑铃罗马尼亚硬拉(RDL)", "mode": "counted", "sets": 3, "reps": "12-15", "tip": "RDL微屈膝、纯髋铰链，腘绳肌对抗胫骨前移。", "restBetweenSets": 90, "equipment": ["杠铃/哑铃"] }
+          ]
+        },
+        {
+          "name": "主训 B", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "B1. 坐姿绳索面拉", "mode": "counted", "sets": 4, "reps": "15-20", "tip": "面拉对抗圆肩，强化肩带后侧防线。", "restBetweenSets": 60, "equipment": ["绳索"] },
+            { "name": "B2. 坐姿器械腿弯举", "mode": "counted", "sets": 3, "reps": "12-15", "tip": "腿弯举要求脚尖微内旋，针对半腱/半膜肌。", "restBetweenSets": 60, "equipment": ["腿弯举机"] }
+          ]
+        },
+        {
+          "name": "孤立核心", "icon": "🎯", "type": "core",
+          "exercises": [
+            { "name": "C1. 坐姿哑铃交替弯举", "mode": "counted", "sets": 3, "reps": "12-15", "tip": "控制离心阶段，避免借力摆荡。", "restBetweenSets": 60, "equipment": ["哑铃"] },
+            { "name": "C2. 初级短杠杆哥本哈根支撑", "mode": "timed", "duration": 30, "sets": 3, "tip": "哥本哈根支撑重塑内收肌静力耐力。", "sides": "each" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage1_pushB", "name": "推B", "icon": "🏋️", "stage": "stage1",
+      "modules": [
+        {
+          "name": "热身放松", "icon": "🧘", "type": "warmup",
+          "exercises": [
+            { "name": "按摩球深压左足底筋膜", "mode": "timed", "duration": 60, "tip": "足底释放张力消除步态代偿。", "equipment": ["按摩球"] },
+            { "name": "泡沫轴：胸小肌、肱三头肌", "mode": "timed", "duration": 45, "tip": "胸小肌松解打开胸廓，三头肌松解为推类动作扫除障碍。", "equipment": ["泡沫轴"] }
+          ]
+        },
+        {
+          "name": "拉伸", "icon": "🤸", "type": "stretch",
+          "exercises": [
+            { "name": "侧卧左膝被动屈曲滑动", "mode": "counted", "sets": 1, "reps": "15次", "tip": "滑动挤压促进分泌滑液，改善膝关节活动度。" },
+            { "name": "门框胸大肌高位拉伸", "mode": "counted", "sets": 2, "reps": "30秒", "tip": "彻底打开肩胸关节间隙，改善上肢活动度。" }
+          ]
+        },
+        {
+          "name": "激活", "icon": "⚡", "type": "activate",
+          "exercises": [
+            { "name": "平衡垫左腿单腿站立 (睁至闭眼)", "mode": "counted", "sets": 2, "reps": "45秒", "tip": "剥夺视觉反馈，强迫中枢依赖左膝本体感受器维持姿态。", "equipment": ["平衡垫"] },
+            { "name": "弹力带侧向行走 (保持半蹲)", "mode": "counted", "sets": 2, "reps": "15步", "tip": "激活臀中肌，防止膝盖内扣塌陷。", "equipment": ["弹力带"] }
+          ]
+        },
+        {
+          "name": "主训 A", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "A1. 坐姿上斜器械推胸", "mode": "counted", "sets": 4, "reps": "10-12", "tip": "健侧(右)用6-8RM重负荷，患侧(左)极轻负荷。", "restBetweenSets": 90, "equipment": ["推胸机"] },
+            { "name": "A2. 单腿器械倒蹬", "mode": "counted", "sets": 4, "reps": "8-15", "tip": "患侧限角0-60度，12-15次；健侧正常负荷。", "restBetweenSets": 90, "equipment": ["倒蹬机"] }
+          ]
+        },
+        {
+          "name": "主训 B", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "B1. 坐姿哑铃阿诺德推举", "mode": "counted", "sets": 3, "reps": "8-12", "tip": "旋转推举全方位刺激三角肌。", "restBetweenSets": 90, "equipment": ["哑铃"] },
+            { "name": "B2. 哑铃高脚杯微蹲", "mode": "counted", "sets": 3, "reps": "10-12", "tip": "重物前置躯干直立，下蹲深度不低于90度。", "restBetweenSets": 60, "equipment": ["哑铃"] }
+          ]
+        },
+        {
+          "name": "孤立核心", "icon": "🎯", "type": "core",
+          "exercises": [
+            { "name": "C1. 仰卧哑铃颈后臂屈伸", "mode": "counted", "sets": 3, "reps": "10-12", "tip": "仰卧解除下肢重力专注三头肌。", "restBetweenSets": 60, "equipment": ["哑铃"] },
+            { "name": "C2. 侧平板支撑", "mode": "timed", "duration": 45, "sets": 3, "tip": "侧平板启动全侧链稳定。", "sides": "each" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage1_pullB", "name": "拉B", "icon": "🧗", "stage": "stage1",
+      "modules": [
+        {
+          "name": "热身放松", "icon": "🧘", "type": "warmup",
+          "exercises": [
+            { "name": "泡沫轴：左侧腹股沟(内收肌)", "mode": "timed", "duration": 60, "tip": "解除内收肌痉挛防骨盆偏移。", "equipment": ["泡沫轴"] },
+            { "name": "按摩球：按压菱形肌", "mode": "timed", "duration": 60, "tip": "释放背部紧张，改善肩胛骨活动。", "equipment": ["按摩球"] }
+          ]
+        },
+        {
+          "name": "拉伸", "icon": "🤸", "type": "stretch",
+          "exercises": [
+            { "name": "俯卧器械腿弯举无负重预演", "mode": "counted", "sets": 1, "reps": "15次", "tip": "微微拉长腘绳肌，避免引起神经反射性收缩。", "equipment": ["腿弯举机"] },
+            { "name": "仰卧毛巾辅助左腿直腿拉伸", "mode": "counted", "sets": 2, "reps": "30秒", "tip": "毛巾辅助控制拉伸幅度，安全提升柔韧性。", "equipment": ["毛巾"] }
+          ]
+        },
+        {
+          "name": "激活", "icon": "⚡", "type": "activate",
+          "exercises": [
+            { "name": "仰卧滑盘腿弯举离心控制", "mode": "counted", "sets": 2, "reps": "10次", "tip": "滑盘极度考验腘绳肌与腹横肌离心拉长。", "equipment": ["滑盘"] },
+            { "name": "单腿硬地平衡 (伴随头部转动)", "mode": "counted", "sets": 2, "reps": "30秒", "tip": "头部转动干扰本体感觉，提升动态平衡能力。" }
+          ]
+        },
+        {
+          "name": "主训 A", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "A1. 宽握高位下拉/辅助引体", "mode": "counted", "sets": 4, "reps": "8-12", "tip": "引体向上离心慢放防摇摆，专注背阔肌。", "restBetweenSets": 90, "equipment": ["高位下拉机/引体辅助"] },
+            { "name": "A2. T杠划船", "mode": "counted", "sets": 3, "reps": "8-10", "tip": "T杠划船塑造背部厚度。", "restBetweenSets": 90, "equipment": ["T杠"] }
+          ]
+        },
+        {
+          "name": "主训 B", "icon": "💪", "type": "main",
+          "exercises": [
+            { "name": "B1. 俯卧器械腿弯举", "mode": "counted", "sets": 3, "reps": "10-12", "tip": "腿弯举离心下落放慢至3秒。", "restBetweenSets": 60, "equipment": ["腿弯举机"] },
+            { "name": "B2. 高位绳索面拉", "mode": "counted", "sets": 3, "reps": "15-20", "tip": "全面强化肩带后侧防线。", "restBetweenSets": 60, "equipment": ["绳索"] }
+          ]
+        },
+        {
+          "name": "孤立核心", "icon": "🎯", "type": "core",
+          "exercises": [
+            { "name": "C1. 绳索锤式弯举", "mode": "counted", "sets": 3, "reps": "12-15", "tip": "中性握法兼顾肱桡肌与肱二头肌。", "restBetweenSets": 60, "equipment": ["绳索"] },
+            { "name": "C2. 跪姿帕洛夫推", "mode": "counted", "sets": 3, "reps": "10/侧", "tip": "帕洛夫推唤醒核心抗旋刚性，双膝跪地降低下肢平衡要求。", "restBetweenSets": 45, "equipment": ["绳索"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

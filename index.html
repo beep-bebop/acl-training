@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#F2F2F7">
+  <title>ACL 康复训练</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 顶部导航栏 -->
+<div class="top-nav">
+  <button class="nav-back hidden" id="navBack">‹</button>
+  <div class="nav-title" id="navTitle">ACL 康复训练</div>
+  <button class="nav-action hidden" id="navAction">编辑</button>
+</div>
+
+<!-- 内容区 -->
+<div class="content with-bottom-nav">
+  <!-- 计划库页面 -->
+  <div class="page active" id="pageLibrary">
+    <div id="libraryContent"></div>
+  </div>
+
+  <!-- 计划详情页面 -->
+  <div class="page" id="pageDetail">
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- 训练页面 -->
+  <div class="page" id="pageTraining">
+    <div id="trainingContent"></div>
+  </div>
+
+  <!-- 日历页面 -->
+  <div class="page" id="pageCalendar">
+    <div id="calendarContent" style="padding:16px;"></div>
+  </div>
+
+  <!-- 设置页面 -->
+  <div class="page" id="pageSettings">
+    <div style="padding:16px;">
+      <div class="settings-section">
+        <h3>计划管理</h3>
+        <div class="settings-card">
+          <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:10px;">
+            <button class="btn-primary" data-import>📥 导入训练计划</button>
+            <button class="btn-export" data-export>📤 导出当前计划</button>
+            <button class="btn-secondary" data-reset-defaults>🔄 恢复默认计划</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>数据管理</h3>
+        <div class="settings-card">
+          <div class="settings-item" style="justify-content:center">
+            <button class="btn-danger" data-reset-all>清除所有训练记录</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Schema 版本</h3>
+        <div class="settings-card">
+          <div class="settings-item">
+            <span class="si-label">数据格式版本</span>
+            <span style="font-size:14px;color:var(--text3);">v6</span>
+          </div>
+          <div class="settings-item">
+            <span class="si-label">已加载计划数</span>
+            <span style="font-size:14px;color:var(--text3);" id="planCount">-</span>
+          </div>
+          <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="si-label">导入数据格式</span>
+              <button style="font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:rgba(0,0,0,0.03);cursor:pointer;color:var(--primary);font-weight:600;" data-copy-schema>📋 一键复制</button>
+            </div>
+            <pre id="schemaTemplate" style="font-size:11px;line-height:1.5;padding:10px;border-radius:10px;background:rgba(0,0,0,0.03);overflow-x:auto;white-space:pre;font-family:monospace;margin:0;max-height:200px;overflow-y:auto;">{
+  "version": 6,
+  "plans": [
+    {
+      "id": "custom_plan_id",
+      "name": "计划名称",
+      "icon": "🏋️",
+      "stage": "stage1",
+      "modules": [
+        {
+          "name": "模块名",
+          "icon": "💪",
+          "type": "main",
+          "exercises": [
+            { "name": "动作名", "mode": "counted", "sets": 3, "reps": "8-12", "tip": "执行要领", "restBetweenSets": 90 },
+            { "name": "计时动作", "mode": "timed", "duration": 60, "tip": "执行要领" }
+          ]
+        }
+      ]
+    }
+  ]
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 浮动计时胶囊 -->
+<div class="timer-pill" id="timerPill">
+  <div class="tp-icon">⏱</div>
+  <div class="tp-info">
+    <div class="tp-label" id="tpLabel">组间休息</div>
+    <div class="tp-countdown" id="tpCount">01:00</div>
+  </div>
+  <div class="tp-actions">
+    <button id="tpPauseBtn" data-timer-pause>⏸</button>
+    <button data-timer-skip>⏭</button>
+    <button class="tp-cancel" data-timer-cancel>✕</button>
+  </div>
+</div>
+
+<!-- 休息计时选择面板 -->
+<div class="timer-overlay" id="timerOverlay">
+  <div class="timer-panel">
+    <div class="time-label">选择休息时长</div>
+    <div style="text-align:center;color:var(--text3);font-size:13px;margin-top:6px;">点击即开始计时</div>
+    <div class="timer-presets">
+      <button data-rest-duration="45">45秒</button>
+      <button data-rest-duration="60">1分钟</button>
+      <button data-rest-duration="90">1.5分钟</button>
+      <button data-rest-duration="120">2分钟</button>
+    </div>
+    <div class="timer-big-actions">
+      <button class="tba-close" data-timer-close>取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入面板 -->
+<div class="timer-overlay" id="importOverlay">
+  <div class="timer-panel" style="width:min(92vw, 380px);max-height:85vh;overflow-y:auto;">
+    <div class="time-label" style="font-size:17px;font-weight:700;">📥 导入训练计划</div>
+    <div style="text-align:center;color:var(--text3);font-size:12px;margin-top:6px;">粘贴符合 v6 schema 的 JSON 数据</div>
+    <textarea id="importText" style="width:100%;height:120px;margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);font-size:12px;font-family:monospace;resize:vertical;background:rgba(0,0,0,0.02);" placeholder='{"version":6,"plans":[...]}'></textarea>
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:6px;">合并策略</div>
+      <select id="importStrategy" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);font-size:14px;background:#fff;">
+        <option value="merge">合并（同 ID 覆盖，新增追加）</option>
+        <option value="replace">替换（清空现有，用导入数据覆盖）</option>
+        <option value="append">追加（所有视为新增，ID 自动去重）</option>
+      </select>
+    </div>
+    <div id="importPreview" style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(0,0,0,0.02);min-height:40px;"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="tba-close" style="flex:1;" data-import-close>取消</button>
+      <button style="flex:1;padding:12px;border-radius:12px;border:none;background:rgba(0,0,0,0.05);font-size:14px;font-weight:600;cursor:pointer;" data-import-preview>预览</button>
+    </div>
+    <button id="importConfirmBtn" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--primary),#5856D6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,0.3);" data-import-confirm>确认导入</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 白色闪光 -->
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<!-- 底部导航 -->
+<div class="bottom-bar" id="bottomBar">
+  <button class="nav-btn active" data-page="pageLibrary">
+    <span class="icon">🏋️</span>计划库
+  </button>
+  <button class="nav-btn" data-page="pageCalendar">
+    <span class="icon">📅</span>日历
+  </button>
+  <button class="nav-btn" data-page="pageSettings">
+    <span class="icon">⚙️</span>设置
+  </button>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
