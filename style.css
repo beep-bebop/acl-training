@@ -638,6 +638,13 @@ body {
   cursor: pointer; width: 100%;
 }
 .btn-secondary:active { background: rgba(142,142,147,0.15); }
+.btn-export {
+  padding: 12px 20px; border-radius: var(--radius-sm);
+  border: none; background: rgba(52,199,89,0.08);
+  color: #34C759; font-size: 14px; font-weight: 600;
+  cursor: pointer; width: 100%;
+}
+.btn-export:active { background: rgba(52,199,89,0.15); }
 
 /* ===== 白色闪光 ===== */
 .flash-overlay {
