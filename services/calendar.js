@@ -4,7 +4,7 @@ import { saveToStorage } from '../core/storage.js';
 import { getPlan, todayStr } from '../utils/helpers.js';
 
 /** 记录动作完成到日历 */
-export function logCalendar(planId, exName) {
+export function logCalendar(planId, exName, persist = true) {
   const today = todayStr();
   if (!state.calendarLogs[today]) state.calendarLogs[today] = [];
   if (!state.calendarLogs[today].find(l => l.planId === planId && l.name === exName)) {
@@ -15,5 +15,5 @@ export function logCalendar(planId, exName) {
       time: Date.now(),
     });
   }
-  saveToStorage();
+  if (persist) saveToStorage();
 }

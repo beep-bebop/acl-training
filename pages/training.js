@@ -7,13 +7,60 @@ import {
   getSetsDisplay, getSetCount, isTimedMode, getDuration,
   getExerciseRest, isSetDone, isExerciseDone,
   getPlanProgress, isModuleActive, isModuleDone,
-  showToast, alertFinish
+  showToast
 } from '../utils/helpers.js';
 import { showTimerPill } from '../services/timer.js';
-import { toggleInlineTimer } from '../components/inline-timer.js';
+import { logCalendar } from '../services/calendar.js';
+
+let trainingDurationTicker = null;
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${mm}:${ss}`;
+  }
+  return `${mm}:${ss}`;
+}
+
+function updateTrainingDurationDisplay() {
+  const el = document.getElementById('trainingElapsedValue');
+  if (!el || !state.trainingSessionStartAt) return;
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - state.trainingSessionStartAt) / 1000));
+  el.textContent = formatElapsed(elapsedSeconds);
+}
+
+function startTrainingDurationTicker() {
+  stopTrainingDurationTicker();
+  updateTrainingDurationDisplay();
+  trainingDurationTicker = setInterval(() => {
+    if (state.currentPage !== 'pageTraining') return;
+    updateTrainingDurationDisplay();
+  }, 1000);
+}
+
+export function stopTrainingDurationTicker() {
+  if (trainingDurationTicker) {
+    clearInterval(trainingDurationTicker);
+    trainingDurationTicker = null;
+  }
+}
 
 export function startTraining(planId) {
   state.currentPlanId = planId;
+  state.trainingSessionStartAt = Date.now();
   const today = todayStr();
   if (state.trainingDate !== today) {
     state.trainingProgress = {};
@@ -24,18 +71,36 @@ export function startTraining(planId) {
 }
 
 export function renderTraining() {
-  const plan = getPlan(state.currentPlanId, state.plans);
-  if (!plan) return;
-  const stage = getStage(plan.stage, STAGES);
   const container = document.getElementById('trainingContent');
+  if (!container) return;
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan) {
+    stopTrainingDurationTicker();
+    container.innerHTML = `
+      <div style="margin:14px 8px;padding:14px;border-radius:16px;background:var(--glass-heavy);border:1px solid var(--glass-border);">
+        <div style="font-weight:700;">当前计划不可用</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:6px;">可能已被替换或删除，请返回计划库重新选择。</div>
+      </div>`;
+    return;
+  }
+  const stage = getStage(plan.stage, STAGES);
   const prog = getPlanProgress(state.currentPlanId, state.plans, state.userEdits, state.trainingProgress);
   const pct = prog.total > 0 ? Math.round(prog.done / prog.total * 100) : 0;
+  const elapsedSeconds = state.trainingSessionStartAt
+    ? Math.max(0, Math.floor((Date.now() - state.trainingSessionStartAt) / 1000))
+    : 0;
+  const safePlanName = escapeHtml(plan.name);
+  const safeStageSubtitle = escapeHtml(stage.subtitle);
 
   let html = '<div class="training-header">';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
-  html += `<div><span style="font-size:20px;font-weight:800;">${plan.icon} ${plan.name}</span>`;
-  html += `<span style="font-size:12px;color:var(--text3);margin-left:8px;">${stage.subtitle}</span></div>`;
-  html += `<div style="font-size:24px;font-weight:800;color:var(--primary);">${pct}%</div></div>`;
+  html += '<div class="training-top-row">';
+  html += `<div class="training-plan-main"><span class="training-plan-title">${plan.icon} ${safePlanName}</span>`;
+  html += `<span class="training-stage-subtitle">${safeStageSubtitle}</span></div>`;
+  html += `<div class="training-progress-num">${pct}%</div></div>`;
+  html += '<div class="training-meta-row">';
+  html += `<div class="training-elapsed"><span class="dot"></span><span class="label">总时长</span>`;
+  html += `<span class="value" id="trainingElapsedValue">${formatElapsed(elapsedSeconds)}</span></div>`;
+  html += `<div class="training-count-mini">${prog.done}/${prog.total} 完成</div></div>`;
   html += `<div class="training-progress-bar"><div class="training-progress-fill" style="width:${pct}%"></div></div>`;
   html += `<div class="training-progress-text">${prog.done} / ${prog.total} 个动作完成</div></div>`;
 
@@ -53,15 +118,23 @@ export function renderTraining() {
   plan.modules.forEach((mod, mi) => {
     let modDone = 0;
     mod.exercises.forEach((_, ei) => { if (isExerciseDone(state.currentPlanId, mi, ei, state.plans, state.userEdits, state.trainingProgress)) modDone++; });
+    const safeModName = escapeHtml(mod.name);
     html += `<div class="training-module${mi === activeModuleIdx ? ' open' : ''}">`;
     html += '<div class="training-module-head" data-toggle-module>';
     html += `<div class="training-module-icon ${mod.type}">${mod.icon}</div>`;
-    html += `<div class="training-module-info"><div class="training-module-name">${mod.name}</div>`;
+    html += `<div class="training-module-info"><div class="training-module-name">${safeModName}</div>`;
     html += `<div class="training-module-progress">${modDone}/${mod.exercises.length} 完成</div></div>`;
     html += `<div class="training-module-arrow">▶</div></div>`;
     html += `<div class="training-module-body"><div class="training-module-inner" data-module-inner="${mi}"></div></div></div>`;
   });
 
+  // 重绘前先清理旧的内联计时器，避免 interval 残留
+  container.querySelectorAll('[data-inline-timer]').forEach((el) => {
+    if (el._interval) {
+      clearInterval(el._interval);
+      el._interval = null;
+    }
+  });
   container.innerHTML = html;
 
   // 渲染动作
@@ -77,6 +150,9 @@ export function renderTraining() {
       const restSecs = getExerciseRest(state.currentPlanId, mi, ei, state.exerciseRest);
       const isTimed = isTimedMode(actualEx);
       const setsStr = getSetsDisplay(actualEx);
+      const safeExName = escapeHtml(actualEx.name || '');
+      const safeSetsStr = escapeHtml(setsStr || '');
+      const safeTip = escapeHtml(actualEx.tip || '');
 
       let doneSets = 0;
       for (let s = 0; s < totalSets; s++) { if (isSetDone(state.currentPlanId, mi, ei, s, state.trainingProgress)) doneSets++; }
@@ -120,21 +196,26 @@ export function renderTraining() {
       exEl.className = 'exercise' + (done ? ' done' : '');
       exEl.innerHTML = `
         <div class="ex-header">
-          <div class="ex-name">${actualEx.name}</div>
+          <div class="ex-name">${safeExName}</div>
           <button class="ex-detail-btn" data-toggle-detail="${key}">📋详情 <span class="arrow">▶</span></button>
         </div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${setsStr}${totalSets > 1 ? ' · 已完成 ' + doneSets + '/' + totalSets + ' 组' : ''}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${safeSetsStr}${totalSets > 1 ? ' · 已完成 ' + doneSets + '/' + totalSets + ' 组' : ''}</div>
         ${setHtml}${timerHtml}
         <div class="ex-detail" id="detail_${key}">
           <div class="ex-detail-inner">
-            <div class="tip-label">📋 执行要点</div>
-            <div class="tip-text">${actualEx.tip}</div>
+            <div class="tip-head-row">
+              <div class="tip-label">📋 执行要点（训练中可直接编辑）</div>
+              <button class="tip-save-btn" data-save-tip="${state.currentPlanId}|${mi}|${ei}" type="button">保存</button>
+            </div>
+            <textarea class="tip-edit-input" data-tip-input="${state.currentPlanId}|${mi}|${ei}" placeholder="例如：膝盖保持对齐第二脚趾，避免内扣。">${safeTip}</textarea>
             ${totalSets > 1 ? restHtml : ''}
           </div>
         </div>`;
       inner.appendChild(exEl);
     });
   });
+
+  startTrainingDurationTicker();
 }
 
 export function toggleSet(planId, mi, ei, setIdx) {
@@ -151,7 +232,7 @@ export function toggleSet(planId, mi, ei, setIdx) {
     for (let s = 0; s < totalSets; s++) { if (isSetDone(planId, mi, ei, s, state.trainingProgress)) doneCount++; }
     if (doneCount >= totalSets) {
       showToast('✅ 所有组完成！');
-      logCalendar(planId, ex.name);
+      logCalendar(planId, ex.name, false);
     } else {
       const restSecs = getExerciseRest(planId, mi, ei, state.exerciseRest);
       showTimerPill(doneCount, restSecs);
@@ -167,15 +248,26 @@ export function setExerciseRest(planId, mi, ei, secs) {
   renderTraining();
 }
 
-function logCalendar(planId, exName) {
-  const today = todayStr();
-  if (!state.calendarLogs[today]) state.calendarLogs[today] = [];
-  if (!state.calendarLogs[today].find(l => l.planId === planId && l.name === exName)) {
-    const plan = getPlan(planId, state.plans);
-    state.calendarLogs[today].push({ planId, name: exName, planName: plan.name, time: Date.now() });
-  }
-  saveToStorage();
-}
+export function saveExerciseTip(planId, mi, ei, tipText, silent = false) {
+  if (!planId) return;
+  const key = `${mi}_${ei}`;
+  if (!state.userEdits[planId]) state.userEdits[planId] = {};
+  const edit = { ...(state.userEdits[planId][key] || {}) };
+  const normalizedTip = String(tipText ?? '').replace(/\r\n/g, '\n');
 
-// 导出供事件委托使用
-export { toggleInlineTimer };
+  if (normalizedTip.trim()) {
+    edit.tip = normalizedTip;
+  } else {
+    delete edit.tip;
+  }
+
+  if (edit.name === undefined && edit.sets === undefined && edit.tip === undefined) {
+    delete state.userEdits[planId][key];
+    if (!Object.keys(state.userEdits[planId]).length) delete state.userEdits[planId];
+  } else {
+    state.userEdits[planId][key] = edit;
+  }
+
+  saveToStorage();
+  if (!silent) showToast('📝 执行要点已保存');
+}

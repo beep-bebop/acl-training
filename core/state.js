@@ -5,6 +5,7 @@ export const state = {
   currentPage: 'pageLibrary',
   currentPlanId: null,
   isEditMode: false,
+  trainingSessionStartAt: null, // 当前训练会话开始时间（用于总时长展示）
 
   // 数据
   plans: [],

@@ -1,46 +1,62 @@
 // ACL 康复训练 - 入口模块（导航 + 事件委托 + 初始化）
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
-import { renderLibrary } from './pages/library.js';
-import { openPlanDetail, renderDetail, toggleEditMode } from './pages/detail.js';
-import { startTraining, renderTraining, toggleSet, setExerciseRest } from './pages/training.js';
+import { renderLibrary, toggleLibraryStage } from './pages/library.js';
+import { openPlanDetail, renderDetail, toggleDetailEditor, saveDetailEditor, flushDetailEditorChanges } from './pages/detail.js';
+import { startTraining, renderTraining, toggleSet, setExerciseRest, saveExerciseTip, stopTrainingDurationTicker } from './pages/training.js';
 import { toggleInlineTimer } from './components/inline-timer.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import { resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import {
   skipTimer, cancelTimer, pauseTimer,
-  startRestWithDuration, openTimerManual, closeTimerManual
+  startRestWithDuration, closeTimerManual
 } from './services/timer.js';
 
 // ===== 页面导航 =====
 function navigateTo(pageId) {
+  if (state.currentPage === 'pageDetail' && pageId !== 'pageDetail') {
+    flushDetailEditorChanges();
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
+  if (pageId !== 'pageTraining') stopTrainingDurationTicker();
   state.currentPage = pageId;
 
   const navBack = document.getElementById('navBack');
   const navTitle = document.getElementById('navTitle');
   const navAction = document.getElementById('navAction');
   const bottomBar = document.getElementById('bottomBar');
+  const topNav = document.querySelector('.top-nav');
+  const content = document.querySelector('.content');
 
   switch (pageId) {
     case 'pageLibrary':
       navBack.classList.add('hidden'); navTitle.textContent = 'ACL 康复训练';
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden');
+      if (topNav) topNav.classList.add('nav-hidden');
+      if (content) content.classList.add('no-top-nav');
       state.isEditMode = false; break;
     case 'pageDetail':
-      navBack.classList.remove('hidden'); navAction.classList.remove('hidden');
-      navAction.textContent = state.isEditMode ? '完成' : '编辑';
+      navBack.classList.remove('hidden'); navAction.classList.add('hidden');
+      if (topNav) topNav.classList.remove('nav-hidden');
+      if (content) content.classList.remove('no-top-nav');
       bottomBar.classList.add('hidden'); break;
     case 'pageTraining':
       navBack.classList.remove('hidden'); navAction.classList.add('hidden');
+      if (topNav) topNav.classList.remove('nav-hidden');
+      if (content) content.classList.remove('no-top-nav');
       navTitle.textContent = '训练中'; bottomBar.classList.add('hidden'); break;
     case 'pageCalendar':
       navBack.classList.add('hidden'); navTitle.textContent = '训练日历';
+      if (topNav) topNav.classList.remove('nav-hidden');
+      if (content) content.classList.remove('no-top-nav');
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden'); break;
     case 'pageSettings':
       navBack.classList.add('hidden'); navTitle.textContent = '设置';
+      if (topNav) topNav.classList.remove('nav-hidden');
+      if (content) content.classList.remove('no-top-nav');
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden'); break;
   }
 
@@ -53,7 +69,6 @@ function goBack() {
   if (state.currentPage === 'pageTraining') {
     navigateTo('pageDetail'); renderDetail();
   } else if (state.currentPage === 'pageDetail') {
-    if (state.isEditMode) { state.isEditMode = false; document.getElementById('navAction').textContent = '编辑'; }
     navigateTo('pageLibrary'); renderLibrary();
   } else {
     navigateTo('pageLibrary'); renderLibrary();
@@ -70,9 +85,6 @@ function switchTab(pageId) {
 function setupEventDelegation() {
   // 导航
   document.getElementById('navBack').addEventListener('click', goBack);
-  document.getElementById('navAction').addEventListener('click', () => {
-    if (state.currentPage === 'pageDetail') toggleEditMode();
-  });
 
   // 底部 Tab
   document.getElementById('bottomBar').addEventListener('click', (e) => {
@@ -82,6 +94,12 @@ function setupEventDelegation() {
 
   // 计划库 - 点击计划卡片
   document.getElementById('libraryContent').addEventListener('click', (e) => {
+    const stageToggle = e.target.closest('[data-toggle-stage]');
+    if (stageToggle) {
+      toggleLibraryStage(stageToggle.dataset.toggleStage);
+      return;
+    }
+
     const card = e.target.closest('[data-plan-id]');
     if (card) {
       const planId = openPlanDetail(card.dataset.planId);
@@ -92,8 +110,23 @@ function setupEventDelegation() {
 
   // 计划详情 - 开始训练按钮
   document.getElementById('detailContent').addEventListener('click', (e) => {
+    const editOpen = e.target.closest('[data-edit-open]');
+    if (editOpen) {
+      const [mi, ei] = editOpen.dataset.editOpen.split('|');
+      toggleDetailEditor(parseInt(mi, 10), parseInt(ei, 10));
+      return;
+    }
+
+    const editSave = e.target.closest('[data-edit-save]');
+    if (editSave) {
+      const [mi, ei] = editSave.dataset.editSave.split('|');
+      saveDetailEditor(parseInt(mi, 10), parseInt(ei, 10));
+      return;
+    }
+
     const btn = e.target.closest('[data-start-training]');
     if (btn) {
+      flushDetailEditorChanges();
       startTraining(btn.dataset.startTraining);
       navigateTo('pageTraining');
       renderTraining();
@@ -123,7 +156,7 @@ function setupEventDelegation() {
       const key = detailBtn.dataset.toggleDetail;
       const el = document.getElementById('detail_' + key);
       if (el) el.classList.toggle('open');
-      if (detailBtn) detailBtn.classList.toggle('open');
+      detailBtn.classList.toggle('open');
       return;
     }
 
@@ -140,6 +173,35 @@ function setupEventDelegation() {
       const [planId, mi, ei, secs] = restBtn.dataset.setRest.split('|');
       setExerciseRest(planId, parseInt(mi), parseInt(ei), parseInt(secs));
       return;
+    }
+
+    // 快捷保存执行要点
+    const saveTipBtn = e.target.closest('[data-save-tip]');
+    if (saveTipBtn) {
+      const [planId, mi, ei] = saveTipBtn.dataset.saveTip.split('|');
+      const input = document.querySelector(`[data-tip-input="${planId}|${mi}|${ei}"]`);
+      saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), input ? input.value : '');
+      return;
+    }
+  });
+
+  // 训练页 - 执行要点输入自动保存（失焦）
+  document.getElementById('trainingContent').addEventListener('focusout', (e) => {
+    const tipInput = e.target.closest('[data-tip-input]');
+    if (!tipInput) return;
+    const [planId, mi, ei] = tipInput.dataset.tipInput.split('|');
+    saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value, true);
+  });
+
+  // 训练页 - Ctrl/Cmd + Enter 快速保存
+  document.getElementById('trainingContent').addEventListener('keydown', (e) => {
+    const tipInput = e.target.closest('[data-tip-input]');
+    if (!tipInput) return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      const [planId, mi, ei] = tipInput.dataset.tipInput.split('|');
+      saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value);
+      tipInput.blur();
     }
   });
 
@@ -162,6 +224,7 @@ function setupEventDelegation() {
 
   // 导入对话框
   document.getElementById('importOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'importOverlay') { closeImportDialog(); return; }
     if (e.target.closest('[data-import-close]')) closeImportDialog();
     if (e.target.closest('[data-import-preview]')) previewImport();
     if (e.target.closest('[data-import-confirm]')) confirmImport();
@@ -175,6 +238,7 @@ function setupEventDelegation() {
   });
 
   document.getElementById('timerOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'timerOverlay') { closeTimerManual(); return; }
     if (e.target.closest('[data-rest-duration]')) {
       startRestWithDuration(parseInt(e.target.closest('[data-rest-duration]').dataset.restDuration));
       return;
@@ -187,10 +251,8 @@ function setupEventDelegation() {
 async function init() {
   await loadState();
   setupEventDelegation();
+  navigateTo('pageLibrary');
   renderLibrary();
-
-  const el = document.getElementById('planCount');
-  if (el) el.textContent = state.plans.length;
 }
 
 document.addEventListener('DOMContentLoaded', init);

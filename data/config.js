@@ -1,8 +1,8 @@
 // 阶段定义
 export const STAGES = [
-  { id: 'stage1', name: '基础恢复期', subtitle: '阶段一', color: '#34C759', gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)', order: 1 },
-  { id: 'stage2', name: '进阶强化期', subtitle: '阶段二', color: '#FF9500', gradient: 'linear-gradient(135deg, #FF9500 0%, #FF6B35 100%)', order: 2 },
-  { id: 'restday', name: '休息日', subtitle: '居家', color: '#5856D6', gradient: 'linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)', order: 3 },
+  { id: 'stage1', name: '基础恢复期', subtitle: '阶段一', badge: '一', color: '#34C759', gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)', order: 1 },
+  { id: 'stage2', name: '进阶强化期', subtitle: '阶段二', badge: '二', color: '#FF9500', gradient: 'linear-gradient(135deg, #FF9500 0%, #FF6B35 100%)', order: 2 },
+  { id: 'restday', name: '休息日', subtitle: '居家', badge: '休', color: '#5856D6', gradient: 'linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)', order: 3 },
 ];
 
 // 默认计划 JSON 文件列表

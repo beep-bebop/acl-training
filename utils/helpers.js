@@ -51,12 +51,45 @@ export function getSetsDisplay(ex) {
   return ex.reps || '';
 }
 
+function parseSetCountFromText(text) {
+  if (text === undefined || text === null) return null;
+  const raw = String(text).trim();
+  if (!raw) return null;
+
+  // 3×15次 / 3x15 / 3*15
+  const leadingMul = raw.match(/^(\d+)\s*[×xX*]\s*\d+/);
+  if (leadingMul) return Math.max(1, parseInt(leadingMul[1], 10));
+
+  // 3组 / 3 sets
+  const leadingGroupCn = raw.match(/^(\d+)\s*组/);
+  if (leadingGroupCn) return Math.max(1, parseInt(leadingGroupCn[1], 10));
+  const leadingGroupEn = raw.match(/^(\d+)\s*sets?\b/i);
+  if (leadingGroupEn) return Math.max(1, parseInt(leadingGroupEn[1], 10));
+
+  // "每侧3×10次" 这类前缀文字
+  const embeddedMul = raw.match(/(\d+)\s*[×xX*]\s*\d+/);
+  if (embeddedMul) return Math.max(1, parseInt(embeddedMul[1], 10));
+
+  // BFR 风格：30-15-15-15 => 4 组（要求至少 3 段，避免把 8-12 当成 2 组）
+  const repList = raw.match(/^\d+(?:\s*[-/、]\s*\d+){2,}$/);
+  if (repList) {
+    return raw.split(/[-/、]/).length;
+  }
+
+  return null;
+}
+
 // 获取实际组数
 export function getSetCount(ex) {
   if (ex._editSets !== undefined) {
-    const m = ex._editSets.match(/(\d+)\s*[\u00d7xX]/);
-    return m ? parseInt(m[1]) : 1;
+    const inferred = parseSetCountFromText(ex._editSets);
+    if (inferred !== null) return inferred;
   }
+
+  // 优先从 reps 描述提取显式组数，兜底兼容导入计划中的“3×15次”写法
+  const inferredByReps = parseSetCountFromText(ex.reps);
+  if (inferredByReps !== null) return inferredByReps;
+
   return ex.sets || 1;
 }
 

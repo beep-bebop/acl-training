@@ -28,6 +28,7 @@ export function saveToStorage() {
       userEdits: state.userEdits,
       trainingProgress: state.trainingProgress,
       trainingDate: state.trainingDate,
+      trainingSessionStartAt: state.trainingSessionStartAt,
     }));
   } catch (e) { /* quota exceeded, silently fail */ }
 }
@@ -38,6 +39,7 @@ export function clearAllProgress() {
   state.calendarLogs = {};
   state.userEdits = {};
   state.trainingDate = todayStr();
+  state.trainingSessionStartAt = null;
 }
 
 export { STORAGE_KEY };
