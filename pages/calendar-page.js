@@ -3,6 +3,19 @@ import { state } from '../core/state.js';
 import { saveToStorage } from '../core/storage.js';
 import { todayStr } from '../utils/helpers.js';
 
+function escapeHtml(text = '') {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeClassToken(text = '') {
+  return String(text).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
 export function renderCalendar() {
   const container = document.getElementById('calendarContent');
   const now = new Date();
@@ -23,7 +36,7 @@ export function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${state.calYear}-${String(state.calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isToday = dateStr === today;
-    const logs = state.calendarLogs[dateStr];
+    const logs = state.runtime.calendarLogs[dateStr];
     let cls = 'cal-day';
     if (isToday) cls += ' today';
     if (logs && logs.length) {
@@ -31,7 +44,7 @@ export function renderCalendar() {
       logs.forEach(l => {
         const plan = state.plans.find(p => p.id === l.planId);
         const stageId = plan ? plan.stage : '';
-        if (stageId) cls += ` ${stageId}`;
+        if (stageId) cls += ` ${sanitizeClassToken(stageId)}`;
       });
     }
     html += `<div class="${cls}" data-cal-day="${dateStr}">${d}</div>`;
@@ -53,7 +66,7 @@ export function calNext() {
 }
 
 export function showDayDetail(dateStr) {
-  const logs = state.calendarLogs[dateStr] || [];
+  const logs = state.runtime.calendarLogs[dateStr] || [];
   const el = document.getElementById('dayDetail');
   if (!el) return;
   if (!logs.length) {
@@ -63,7 +76,7 @@ export function showDayDetail(dateStr) {
   let html = `<div class="day-detail"><h3>${dateStr} 训练记录</h3>`;
   logs.forEach(log => {
     const time = new Date(log.time);
-    html += `<div class="log-item">${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')} · ${log.planName} · ${log.name}</div>`;
+    html += `<div class="log-item">${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')} · ${escapeHtml(log.planName)} · ${escapeHtml(log.name)}</div>`;
   });
   html += '</div>';
   el.innerHTML = html;

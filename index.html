@@ -55,6 +55,25 @@
         </div>
       </div>
       <div class="settings-section">
+        <h3>AI 辅助</h3>
+        <div class="settings-card">
+          <div class="settings-item ai-config-wrap">
+            <label class="ai-config-label" for="deepseekApiKeyInput">DeepSeek API Key</label>
+            <input id="deepseekApiKeyInput" class="ai-config-input" type="password" placeholder="sk-..." autocomplete="off">
+            <label class="ai-config-label" for="deepseekModelSelect">模型</label>
+            <select id="deepseekModelSelect" class="ai-config-input">
+              <option value="deepseek-v4-flash">deepseek-v4-flash（推荐）</option>
+              <option value="deepseek-v4-pro">deepseek-v4-pro（更强）</option>
+            </select>
+            <div class="ai-config-actions">
+              <button class="btn-primary" type="button" data-save-ai-config>保存 AI 配置</button>
+              <button class="btn-secondary" type="button" data-clear-ai-key>清空 Key</button>
+            </div>
+            <div class="ai-config-hint">提示：仅保存在本机浏览器 localStorage，用于“模型完善详情”功能。</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
         <h3>数据管理</h3>
         <div class="settings-card">
           <div class="settings-item" style="justify-content:center">
@@ -67,7 +86,7 @@
         <div class="settings-card">
           <div class="settings-item">
             <span class="si-label">数据格式版本</span>
-            <span style="font-size:14px;color:var(--text3);">v6</span>
+            <span style="font-size:14px;color:var(--text3);">v7</span>
           </div>
           <div class="settings-item">
             <span class="si-label">已加载计划数</span>
@@ -79,26 +98,51 @@
               <button style="font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:rgba(0,0,0,0.03);cursor:pointer;color:var(--primary);font-weight:600;" data-copy-schema>📋 一键复制</button>
             </div>
             <pre id="schemaTemplate" style="font-size:11px;line-height:1.5;padding:10px;border-radius:10px;background:rgba(0,0,0,0.03);overflow-x:auto;white-space:pre;font-family:monospace;margin:0;max-height:200px;overflow-y:auto;">{
-  "version": 6,
-  "plans": [
-    {
-      "id": "custom_plan_id",
-      "name": "计划名称",
-      "icon": "🏋️",
-      "stage": "stage1",
-      "modules": [
-        {
-          "name": "模块名",
-          "icon": "💪",
-          "type": "main",
-          "exercises": [
-            { "name": "动作名", "mode": "counted", "sets": 3, "reps": "8-12", "tip": "执行要领", "restBetweenSets": 90 },
-            { "name": "计时动作", "mode": "timed", "duration": 60, "tip": "执行要领" }
-          ]
-        }
-      ]
-    }
-  ]
+  "version": 7,
+  "catalog": {
+    "planGroups": [
+      {
+        "id": "stage1",
+        "name": "基础恢复期",
+        "plans": [
+          {
+            "id": "custom_plan_id",
+            "name": "计划名称",
+            "icon": "🏋️",
+            "stage": "stage1",
+            "modules": [
+              {
+                "id": "custom_plan_id__m1",
+                "name": "模块名",
+                "icon": "💪",
+                "type": "main",
+                "exercises": [
+                  {
+                    "id": "custom_plan_id__m1__e1",
+                    "name": "动作名",
+                    "mode": "counted",
+                    "sets": 3,
+                    "reps": "8-12",
+                    "tip": "执行要领",
+                    "enrichment": {
+                      "keyPoints": [],
+                      "commonMistakes": [],
+                      "progression": "",
+                      "references": [],
+                      "videoLinks": [],
+                      "source": "manual"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "runtime": { "progress": {}, "exerciseRest": {}, "calendarLogs": {} },
+  "settings": { "aiConfig": { "deepseekApiKey": "", "deepseekModel": "deepseek-v4-flash" } }
 }</pre>
           </div>
         </div>
@@ -142,8 +186,8 @@
 <div class="timer-overlay" id="importOverlay">
   <div class="timer-panel" style="width:min(92vw, 380px);max-height:85vh;overflow-y:auto;">
     <div class="time-label" style="font-size:17px;font-weight:700;">📥 导入训练计划</div>
-    <div style="text-align:center;color:var(--text3);font-size:12px;margin-top:6px;">粘贴符合 v6 schema 的 JSON 数据</div>
-    <textarea id="importText" style="width:100%;height:120px;margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);font-size:12px;font-family:monospace;resize:vertical;background:rgba(0,0,0,0.02);" placeholder='{"version":6,"plans":[...]}'></textarea>
+    <div style="text-align:center;color:var(--text3);font-size:12px;margin-top:6px;">支持 v7 snapshot（推荐）与 v6 plans 兼容导入</div>
+    <textarea id="importText" style="width:100%;height:120px;margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);font-size:12px;font-family:monospace;resize:vertical;background:rgba(0,0,0,0.02);" placeholder='{"version":7,"catalog":{"planGroups":[...]}}'></textarea>
     <div style="margin-top:10px;">
       <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:6px;">合并策略</div>
       <select id="importStrategy" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);font-size:14px;background:#fff;">
@@ -158,6 +202,46 @@
       <button style="flex:1;padding:12px;border-radius:12px;border:none;background:rgba(0,0,0,0.05);font-size:14px;font-weight:600;cursor:pointer;" data-import-preview>预览</button>
     </div>
     <button id="importConfirmBtn" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--primary),#5856D6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,0.3);" data-import-confirm>确认导入</button>
+  </div>
+</div>
+
+<!-- 新增动作轻量表单 -->
+<div class="timer-overlay" id="addExerciseOverlay">
+  <div class="timer-panel add-ex-panel">
+    <div class="time-label add-ex-title">➕ 新增动作</div>
+    <div class="add-ex-module" id="addExModuleName">模块：</div>
+
+    <div class="add-ex-form">
+      <label for="addExMode">动作类型</label>
+      <select id="addExMode" data-add-ex-mode>
+        <option value="counted">计数动作（如 12 次）</option>
+        <option value="timed">计时动作（如 30 秒）</option>
+      </select>
+
+      <label for="addExName">动作名称</label>
+      <input id="addExName" type="text" placeholder="例如：弹力带肩外旋">
+
+      <label for="addExSets">组数</label>
+      <input id="addExSets" type="number" min="1" step="1" value="1">
+
+      <div id="addExCountedWrap">
+        <label for="addExReps">次数 / 描述</label>
+        <input id="addExReps" type="text" placeholder="例如：12次 或 8-10/侧">
+      </div>
+
+      <div id="addExTimedWrap" class="hidden">
+        <label for="addExDuration">单组时长（秒）</label>
+        <input id="addExDuration" type="number" min="5" step="5" value="30">
+      </div>
+
+      <label for="addExTip">执行要点 / 备注</label>
+      <textarea id="addExTip" rows="3" placeholder="例如：注意膝盖对齐第二脚趾，核心收紧。"></textarea>
+    </div>
+
+    <div class="add-ex-actions">
+      <button class="tba-close" type="button" data-add-ex-cancel>取消</button>
+      <button class="add-ex-confirm-btn" type="button" data-add-ex-confirm>添加动作</button>
+    </div>
   </div>
 </div>
 

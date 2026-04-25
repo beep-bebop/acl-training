@@ -1,8 +1,8 @@
 // 设置页面
 import { state } from '../core/state.js';
 import { saveToStorage, clearAllProgress } from '../core/storage.js';
-import { loadDefaultPlans } from '../services/plans.js';
-import { showToast, copyToClipboard, todayStr } from '../utils/helpers.js';
+import { getCurrentSnapshot, importPlans, loadDefaultCatalogSnapshot } from '../services/plans.js';
+import { showToast, copyToClipboard } from '../utils/helpers.js';
 import { renderLibrary } from './library.js';
 
 export function resetAllData() {
@@ -15,20 +15,25 @@ export function resetAllData() {
 
 export async function resetPlansToDefault() {
   if (!confirm('确定要恢复默认计划吗？自定义导入的计划将丢失。')) return;
-  const defaults = await loadDefaultPlans();
-  state.plans = JSON.parse(JSON.stringify(defaults));
-  state.userEdits = {};
-  saveToStorage();
+  const defaults = await loadDefaultCatalogSnapshot();
+  const snapshot = getCurrentSnapshot();
+  snapshot.catalog = defaults.catalog;
+  snapshot.runtime.progress = {};
+  snapshot.runtime.exerciseRest = {};
+  snapshot.runtime.trainingSessionStartAt = null;
+  const result = importPlans(snapshot, 'replace');
+  if (!result.ok) {
+    showToast(`❌ ${result.msg}`);
+    return;
+  }
   renderLibrary();
   showToast('🔄 已恢复默认计划');
 }
 
 export function exportPlans() {
   const data = {
-    version: 6,
+    ...getCurrentSnapshot(),
     exportedAt: new Date().toISOString(),
-    plans: state.plans,
-    userEdits: state.userEdits
   };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -51,4 +56,38 @@ export function copySchemaTemplate() {
   }).catch(() => {
     showToast('❌ 复制失败，请手动选择复制');
   });
+}
+
+export function hydrateAiConfigInputs() {
+  const keyInput = document.getElementById('deepseekApiKeyInput');
+  const modelSelect = document.getElementById('deepseekModelSelect');
+  if (keyInput) keyInput.value = state.settings?.aiConfig?.deepseekApiKey || '';
+  if (modelSelect) {
+    const model = state.settings?.aiConfig?.deepseekModel === 'deepseek-v4-pro'
+      ? 'deepseek-v4-pro'
+      : 'deepseek-v4-flash';
+    modelSelect.value = model;
+  }
+}
+
+export function saveAiConfig() {
+  const keyInput = document.getElementById('deepseekApiKeyInput');
+  const modelSelect = document.getElementById('deepseekModelSelect');
+  if (!state.settings) state.settings = {};
+  if (!state.settings.aiConfig) state.settings.aiConfig = {};
+  state.settings.aiConfig.deepseekApiKey = keyInput ? keyInput.value.trim() : '';
+  state.settings.aiConfig.deepseekModel = modelSelect && modelSelect.value === 'deepseek-v4-pro'
+    ? 'deepseek-v4-pro'
+    : 'deepseek-v4-flash';
+  saveToStorage();
+  showToast('🤖 AI 配置已保存');
+}
+
+export function clearAiApiKey() {
+  if (!state.settings) state.settings = {};
+  if (!state.settings.aiConfig) state.settings.aiConfig = {};
+  state.settings.aiConfig.deepseekApiKey = '';
+  saveToStorage();
+  hydrateAiConfigInputs();
+  showToast('🔐 已清空 API Key');
 }

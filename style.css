@@ -339,8 +339,26 @@ body::after {
   color: var(--primary);
   margin-bottom: 4px;
 }
+.detail-editor-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.detail-ex-edit-mode {
+  border-radius: 8px;
+  border: 1px solid rgba(0,122,255,0.28);
+  background: rgba(255,255,255,0.88);
+  color: var(--text1);
+  font-size: 12px;
+  padding: 6px 8px;
+  font-family: inherit;
+}
 .detail-ex-edit-name,
-.detail-ex-edit-sets {
+.detail-ex-edit-sets,
+.detail-ex-edit-reps,
+.detail-ex-edit-duration {
   display: block;
 }
 .detail-ex-edit-name {
@@ -363,6 +381,21 @@ body::after {
   text-align: left;
   font-family: inherit;
   margin-bottom: 8px;
+}
+.detail-ex-edit-reps,
+.detail-ex-edit-duration {
+  width: 100%;
+  padding: 6px 8px; border-radius: 6px;
+  border: 1px solid rgba(0,122,255,0.3);
+  font-size: 12px; font-weight: 500;
+  background: rgba(0,122,255,0.04);
+  outline: none;
+  text-align: left;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+.detail-mode-panel.hidden {
+  display: none;
 }
 .detail-ex-edit-tip {
   width: 100%;
@@ -390,6 +423,40 @@ body::after {
   cursor: pointer;
 }
 .detail-save-btn:active {
+  transform: scale(0.98);
+}
+.detail-ai-btn {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid rgba(88,86,214,0.28);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5856D6;
+  background: rgba(88,86,214,0.08);
+  cursor: pointer;
+}
+.detail-ai-btn:active {
+  transform: scale(0.98);
+}
+.detail-ai-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.detail-add-ex-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px dashed rgba(0,122,255,0.35);
+  background: rgba(0,122,255,0.05);
+  color: var(--primary);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.detail-add-ex-btn:active {
   transform: scale(0.98);
 }
 
@@ -626,7 +693,7 @@ body::after {
   max-height: 0; overflow: hidden;
   transition: max-height 0.3s ease;
 }
-.ex-detail.open { max-height: 600px; }
+.ex-detail.open { max-height: 900px; }
 .ex-detail-inner {
   margin-top: 10px; padding: 14px;
   border-radius: var(--radius-sm);
@@ -790,6 +857,85 @@ body::after {
   text-align: center;
 }
 .timer-panel .time-label { font-size: 14px; color: var(--text3); }
+.add-ex-panel {
+  width: min(92vw, 390px);
+  padding: 20px 16px 16px;
+  max-height: 88vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.add-ex-title {
+  font-size: 17px !important;
+  font-weight: 700;
+  color: var(--text1) !important;
+}
+.add-ex-module {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.add-ex-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.add-ex-form label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.add-ex-form input,
+.add-ex-form select,
+.add-ex-form textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(0,122,255,0.22);
+  background: rgba(255,255,255,0.85);
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text1);
+  font-family: inherit;
+  outline: none;
+}
+.add-ex-form textarea {
+  resize: vertical;
+  min-height: 74px;
+}
+.add-ex-form input:focus,
+.add-ex-form select:focus,
+.add-ex-form textarea:focus {
+  border-color: rgba(0,122,255,0.5);
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.08);
+  background: #fff;
+}
+.add-ex-form .hidden {
+  display: none;
+}
+.add-ex-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.add-ex-actions .tba-close,
+.add-ex-confirm-btn {
+  flex: 1;
+}
+.add-ex-confirm-btn {
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), #5856D6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 14px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0,122,255,0.25);
+}
+.add-ex-confirm-btn:active {
+  transform: scale(0.97);
+}
 .timer-presets {
   display: flex; gap: 8px; margin-top: 20px; justify-content: center;
   flex-wrap: wrap;
@@ -921,6 +1067,45 @@ body::after {
 }
 .settings-item:last-child { border-bottom: none; }
 .settings-item .si-label { font-size: 14px; font-weight: 500; }
+.ai-config-wrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.ai-config-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.ai-config-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.82);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text1);
+  font-family: inherit;
+}
+.ai-config-input:focus {
+  outline: none;
+  border-color: rgba(0,122,255,0.45);
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.08);
+}
+.ai-config-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.ai-config-actions .btn-primary,
+.ai-config-actions .btn-secondary {
+  flex: 1;
+}
+.ai-config-hint {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.45;
+}
 .btn-danger {
   padding: 12px 20px; border-radius: var(--radius-sm);
   border: none; background: rgba(255,59,48,0.08);

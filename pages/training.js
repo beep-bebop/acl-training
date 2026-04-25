@@ -4,9 +4,10 @@ import { STAGES } from '../data/config.js';
 import { saveToStorage } from '../core/storage.js';
 import {
   todayStr, exKey, getStage, getPlan, getExercise,
+  getModuleExercises,
   getSetsDisplay, getSetCount, isTimedMode, getDuration,
   getExerciseRest, isSetDone, isExerciseDone,
-  getPlanProgress, isModuleActive, isModuleDone,
+  getPlanProgress, isModuleActive, isModuleDone, getPlanGroupByPlanId,
   showToast
 } from '../utils/helpers.js';
 import { showTimerPill } from '../services/timer.js';
@@ -23,6 +24,10 @@ function escapeHtml(value = '') {
     .replace(/'/g, '&#39;');
 }
 
+function sanitizeClassToken(value = '') {
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
 function formatElapsed(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -37,8 +42,8 @@ function formatElapsed(totalSeconds) {
 
 function updateTrainingDurationDisplay() {
   const el = document.getElementById('trainingElapsedValue');
-  if (!el || !state.trainingSessionStartAt) return;
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - state.trainingSessionStartAt) / 1000));
+  if (!el || !state.runtime.trainingSessionStartAt) return;
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - state.runtime.trainingSessionStartAt) / 1000));
   el.textContent = formatElapsed(elapsedSeconds);
 }
 
@@ -60,11 +65,11 @@ export function stopTrainingDurationTicker() {
 
 export function startTraining(planId) {
   state.currentPlanId = planId;
-  state.trainingSessionStartAt = Date.now();
+  state.runtime.trainingSessionStartAt = Date.now();
   const today = todayStr();
-  if (state.trainingDate !== today) {
-    state.trainingProgress = {};
-    state.trainingDate = today;
+  if (state.runtime.trainingDate !== today) {
+    state.runtime.progress = {};
+    state.runtime.trainingDate = today;
     saveToStorage();
   }
   return planId;
@@ -83,18 +88,20 @@ export function renderTraining() {
       </div>`;
     return;
   }
-  const stage = getStage(plan.stage, STAGES);
-  const prog = getPlanProgress(state.currentPlanId, state.plans, state.userEdits, state.trainingProgress);
+  const stage = getPlanGroupByPlanId(plan.id, state.catalog, STAGES) || getStage(plan.stage, STAGES);
+  const prog = getPlanProgress(state.currentPlanId, state.plans, {}, state.runtime.progress);
   const pct = prog.total > 0 ? Math.round(prog.done / prog.total * 100) : 0;
-  const elapsedSeconds = state.trainingSessionStartAt
-    ? Math.max(0, Math.floor((Date.now() - state.trainingSessionStartAt) / 1000))
+  const elapsedSeconds = state.runtime.trainingSessionStartAt
+    ? Math.max(0, Math.floor((Date.now() - state.runtime.trainingSessionStartAt) / 1000))
     : 0;
+  const safePlanIcon = escapeHtml(plan.icon || '•');
   const safePlanName = escapeHtml(plan.name);
-  const safeStageSubtitle = escapeHtml(stage.subtitle);
+  const safeStageSubtitle = escapeHtml(stage.subtitle || stage.name || '');
+  const encodedPlanId = encodeURIComponent(state.currentPlanId || '');
 
   let html = '<div class="training-header">';
   html += '<div class="training-top-row">';
-  html += `<div class="training-plan-main"><span class="training-plan-title">${plan.icon} ${safePlanName}</span>`;
+  html += `<div class="training-plan-main"><span class="training-plan-title">${safePlanIcon} ${safePlanName}</span>`;
   html += `<span class="training-stage-subtitle">${safeStageSubtitle}</span></div>`;
   html += `<div class="training-progress-num">${pct}%</div></div>`;
   html += '<div class="training-meta-row">';
@@ -107,23 +114,28 @@ export function renderTraining() {
   // 找活跃模块
   let activeModuleIdx = -1;
   for (let mi = 0; mi < plan.modules.length; mi++) {
-    if (isModuleActive(state.currentPlanId, mi, state.plans, state.userEdits, state.trainingProgress)) { activeModuleIdx = mi; break; }
+    if (isModuleActive(state.currentPlanId, mi, state.plans, {}, state.runtime.progress)) { activeModuleIdx = mi; break; }
   }
   if (activeModuleIdx === -1) {
     for (let mi = 0; mi < plan.modules.length; mi++) {
-      if (!isModuleDone(state.currentPlanId, mi, state.plans, state.userEdits, state.trainingProgress)) { activeModuleIdx = mi; break; }
+      if (!isModuleDone(state.currentPlanId, mi, state.plans, {}, state.runtime.progress)) { activeModuleIdx = mi; break; }
     }
   }
 
   plan.modules.forEach((mod, mi) => {
+    const moduleExercises = getModuleExercises(state.currentPlanId, mi, state.plans, {});
     let modDone = 0;
-    mod.exercises.forEach((_, ei) => { if (isExerciseDone(state.currentPlanId, mi, ei, state.plans, state.userEdits, state.trainingProgress)) modDone++; });
+    moduleExercises.forEach((_, ei) => {
+      if (isExerciseDone(state.currentPlanId, mi, ei, state.plans, {}, state.runtime.progress)) modDone++;
+    });
+    const safeModIcon = escapeHtml(mod.icon || '•');
     const safeModName = escapeHtml(mod.name);
+    const safeModType = sanitizeClassToken(mod.type || 'custom');
     html += `<div class="training-module${mi === activeModuleIdx ? ' open' : ''}">`;
     html += '<div class="training-module-head" data-toggle-module>';
-    html += `<div class="training-module-icon ${mod.type}">${mod.icon}</div>`;
+    html += `<div class="training-module-icon ${safeModType}">${safeModIcon}</div>`;
     html += `<div class="training-module-info"><div class="training-module-name">${safeModName}</div>`;
-    html += `<div class="training-module-progress">${modDone}/${mod.exercises.length} 完成</div></div>`;
+    html += `<div class="training-module-progress">${modDone}/${moduleExercises.length} 完成</div></div>`;
     html += `<div class="training-module-arrow">▶</div></div>`;
     html += `<div class="training-module-body"><div class="training-module-inner" data-module-inner="${mi}"></div></div></div>`;
   });
@@ -139,15 +151,18 @@ export function renderTraining() {
 
   // 渲染动作
   plan.modules.forEach((mod, mi) => {
+    const moduleExercises = getModuleExercises(state.currentPlanId, mi, state.plans, {});
     const inner = container.querySelector(`[data-module-inner="${mi}"]`);
     if (!inner) return;
 
-    mod.exercises.forEach((ex, ei) => {
-      const actualEx = getExercise(state.currentPlanId, mi, ei, state.plans, state.userEdits);
-      const done = isExerciseDone(state.currentPlanId, mi, ei, state.plans, state.userEdits, state.trainingProgress);
+    moduleExercises.forEach((_ex, ei) => {
+      const actualEx = getExercise(state.currentPlanId, mi, ei, state.plans, {});
+      if (!actualEx) return;
+      const done = isExerciseDone(state.currentPlanId, mi, ei, state.plans, {}, state.runtime.progress);
       const totalSets = getSetCount(actualEx);
-      const key = exKey(state.currentPlanId, mi, ei);
-      const restSecs = getExerciseRest(state.currentPlanId, mi, ei, state.exerciseRest);
+      const key = exKey(state.currentPlanId, mi, ei, state.plans, {});
+      const keyToken = encodeURIComponent(key);
+      const restSecs = getExerciseRest(state.currentPlanId, mi, ei, state.runtime.exerciseRest, state.plans, {});
       const isTimed = isTimedMode(actualEx);
       const setsStr = getSetsDisplay(actualEx);
       const safeExName = escapeHtml(actualEx.name || '');
@@ -155,23 +170,27 @@ export function renderTraining() {
       const safeTip = escapeHtml(actualEx.tip || '');
 
       let doneSets = 0;
-      for (let s = 0; s < totalSets; s++) { if (isSetDone(state.currentPlanId, mi, ei, s, state.trainingProgress)) doneSets++; }
+      for (let s = 0; s < totalSets; s++) {
+        if (isSetDone(state.currentPlanId, mi, ei, s, state.runtime.progress, state.plans, {})) doneSets++;
+      }
 
       let nextSet = -1;
-      for (let s = 0; s < totalSets; s++) { if (!isSetDone(state.currentPlanId, mi, ei, s, state.trainingProgress)) { nextSet = s; break; } }
+      for (let s = 0; s < totalSets; s++) {
+        if (!isSetDone(state.currentPlanId, mi, ei, s, state.runtime.progress, state.plans, {})) { nextSet = s; break; }
+      }
 
       // 组按钮
       let setHtml = '';
       if (totalSets > 1 || doneSets > 0) {
         setHtml = '<div class="ex-sets-row">';
         for (let s = 0; s < totalSets; s++) {
-          const sd = isSetDone(state.currentPlanId, mi, ei, s, state.trainingProgress);
+          const sd = isSetDone(state.currentPlanId, mi, ei, s, state.runtime.progress, state.plans, {});
           const isNext = s === nextSet && !done;
-          setHtml += `<button class="set-btn${sd ? ' done' : ''}${isNext ? ' next' : ''}" data-toggle-set="${state.currentPlanId}|${mi}|${ei}|${s}">第${s + 1}组${sd ? ' ✓' : ''}</button>`;
+          setHtml += `<button class="set-btn${sd ? ' done' : ''}${isNext ? ' next' : ''}" data-toggle-set="${encodedPlanId}|${mi}|${ei}|${s}">第${s + 1}组${sd ? ' ✓' : ''}</button>`;
         }
         setHtml += '</div>';
       } else {
-        setHtml = `<div class="ex-sets-row"><button class="set-btn${done ? ' done' : ' next'}" data-toggle-set="${state.currentPlanId}|${mi}|${ei}|0">${done ? '✓ 已完成' : '点击完成'}</button></div>`;
+        setHtml = `<div class="ex-sets-row"><button class="set-btn${done ? ' done' : ' next'}" data-toggle-set="${encodedPlanId}|${mi}|${ei}|0">${done ? '✓ 已完成' : '点击完成'}</button></div>`;
       }
 
       // 计时
@@ -188,7 +207,7 @@ export function renderTraining() {
       let restHtml = '<div class="rest-setting"><div class="rest-label">⏱ 组间休息时长</div><div class="rest-presets">';
       restPresets.forEach(s => {
         const label = s >= 60 ? `${s / 60}分钟` : `${s}秒`;
-        restHtml += `<button class="${s === restSecs ? 'active' : ''}" data-set-rest="${state.currentPlanId}|${mi}|${ei}|${s}">${label}</button>`;
+        restHtml += `<button class="${s === restSecs ? 'active' : ''}" data-set-rest="${encodedPlanId}|${mi}|${ei}|${s}">${label}</button>`;
       });
       restHtml += '</div></div>';
 
@@ -197,17 +216,17 @@ export function renderTraining() {
       exEl.innerHTML = `
         <div class="ex-header">
           <div class="ex-name">${safeExName}</div>
-          <button class="ex-detail-btn" data-toggle-detail="${key}">📋详情 <span class="arrow">▶</span></button>
+          <button class="ex-detail-btn" data-toggle-detail="${keyToken}">📋详情 <span class="arrow">▶</span></button>
         </div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px;">${safeSetsStr}${totalSets > 1 ? ' · 已完成 ' + doneSets + '/' + totalSets + ' 组' : ''}</div>
         ${setHtml}${timerHtml}
-        <div class="ex-detail" id="detail_${key}">
+        <div class="ex-detail" id="detail_${keyToken}">
           <div class="ex-detail-inner">
             <div class="tip-head-row">
               <div class="tip-label">📋 执行要点（训练中可直接编辑）</div>
-              <button class="tip-save-btn" data-save-tip="${state.currentPlanId}|${mi}|${ei}" type="button">保存</button>
+              <button class="tip-save-btn" data-save-tip="${encodedPlanId}|${mi}|${ei}" type="button">保存</button>
             </div>
-            <textarea class="tip-edit-input" data-tip-input="${state.currentPlanId}|${mi}|${ei}" placeholder="例如：膝盖保持对齐第二脚趾，避免内扣。">${safeTip}</textarea>
+            <textarea class="tip-edit-input" data-tip-input="${encodedPlanId}|${mi}|${ei}" placeholder="例如：膝盖保持对齐第二脚趾，避免内扣。">${safeTip}</textarea>
             ${totalSets > 1 ? restHtml : ''}
           </div>
         </div>`;
@@ -219,22 +238,24 @@ export function renderTraining() {
 }
 
 export function toggleSet(planId, mi, ei, setIdx) {
-  const key = exKey(planId, mi, ei);
+  const key = exKey(planId, mi, ei, state.plans, {});
   const setKey = `${key}_s${setIdx}`;
-  const ex = getExercise(planId, mi, ei, state.plans, state.userEdits);
+  const ex = getExercise(planId, mi, ei, state.plans, {});
   const totalSets = getSetCount(ex);
 
-  if (isSetDone(planId, mi, ei, setIdx, state.trainingProgress)) {
-    delete state.trainingProgress[setKey];
+  if (isSetDone(planId, mi, ei, setIdx, state.runtime.progress, state.plans, {})) {
+    delete state.runtime.progress[setKey];
   } else {
-    state.trainingProgress[setKey] = true;
+    state.runtime.progress[setKey] = true;
     let doneCount = 0;
-    for (let s = 0; s < totalSets; s++) { if (isSetDone(planId, mi, ei, s, state.trainingProgress)) doneCount++; }
+    for (let s = 0; s < totalSets; s++) {
+      if (isSetDone(planId, mi, ei, s, state.runtime.progress, state.plans, {})) doneCount++;
+    }
     if (doneCount >= totalSets) {
       showToast('✅ 所有组完成！');
-      logCalendar(planId, ex.name, false);
+      logCalendar(planId, ex.name, ex.id, false);
     } else {
-      const restSecs = getExerciseRest(planId, mi, ei, state.exerciseRest);
+      const restSecs = getExerciseRest(planId, mi, ei, state.runtime.exerciseRest, state.plans, {});
       showTimerPill(doneCount, restSecs);
     }
   }
@@ -243,30 +264,17 @@ export function toggleSet(planId, mi, ei, setIdx) {
 }
 
 export function setExerciseRest(planId, mi, ei, secs) {
-  state.exerciseRest[exKey(planId, mi, ei)] = secs;
+  state.runtime.exerciseRest[exKey(planId, mi, ei, state.plans, {})] = secs;
   saveToStorage();
   renderTraining();
 }
 
 export function saveExerciseTip(planId, mi, ei, tipText, silent = false) {
   if (!planId) return;
-  const key = `${mi}_${ei}`;
-  if (!state.userEdits[planId]) state.userEdits[planId] = {};
-  const edit = { ...(state.userEdits[planId][key] || {}) };
-  const normalizedTip = String(tipText ?? '').replace(/\r\n/g, '\n');
-
-  if (normalizedTip.trim()) {
-    edit.tip = normalizedTip;
-  } else {
-    delete edit.tip;
-  }
-
-  if (edit.name === undefined && edit.sets === undefined && edit.tip === undefined) {
-    delete state.userEdits[planId][key];
-    if (!Object.keys(state.userEdits[planId]).length) delete state.userEdits[planId];
-  } else {
-    state.userEdits[planId][key] = edit;
-  }
+  const ex = getExercise(planId, mi, ei, state.plans, {});
+  if (!ex) return;
+  const normalizedTip = String(tipText ?? '').replace(/\r\n/g, '\n').trim();
+  ex.tip = normalizedTip;
 
   saveToStorage();
   if (!silent) showToast('📝 执行要点已保存');

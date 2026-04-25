@@ -5,10 +5,6 @@ export function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function exKey(planId, mi, ei) {
-  return `${planId}_${mi}_${ei}`;
-}
-
 // 计划数据查询
 export function getStage(stageId, STAGES) {
   const stage = STAGES.find(s => s.id === stageId);
@@ -17,37 +13,42 @@ export function getStage(stageId, STAGES) {
 }
 
 export function getPlan(planId, plans) {
-  return plans.find(p => p.id === planId) || null;
+  const list = Array.isArray(plans) ? plans : [];
+  return list.find(p => p.id === planId) || null;
+}
+
+export function getModuleExercises(planId, mi, plans, userEdits) {
+  const plan = getPlan(planId, plans);
+  if (!plan) return [];
+  return Array.isArray(plan.modules?.[mi]?.exercises) ? plan.modules[mi].exercises : [];
+}
+
+function asPositiveInt(value, fallback = 1) {
+  const n = Number(value);
+  if (Number.isFinite(n) && n > 0) return Math.max(1, Math.floor(n));
+  return fallback;
 }
 
 export function getExercise(planId, mi, ei, plans, userEdits) {
-  const plan = getPlan(planId, plans);
-  if (!plan) return null;
-  const ex = plan.modules[mi]?.exercises[ei];
-  if (!ex) return null;
-  const edit = userEdits[planId]?.[`${mi}_${ei}`];
-  if (edit) {
-    return {
-      ...ex,
-      name: edit.name ?? ex.name,
-      tip: edit.tip ?? ex.tip,
-      ...(edit.sets !== undefined ? { _editSets: edit.sets } : {}),
-    };
-  }
-  return ex;
+  return getModuleExercises(planId, mi, plans, userEdits)[ei] || null;
 }
 
 // 显示用组数描述
 export function getSetsDisplay(ex) {
-  if (ex._editSets !== undefined) return ex._editSets;
   if (ex.mode === 'timed') {
-    const mins = Math.floor(ex.duration / 60);
-    const secs = ex.duration % 60;
-    if (mins > 0 && secs > 0) return `${mins}分${secs}秒`;
-    if (mins > 0) return `${mins}分钟`;
-    return `${secs}秒`;
+    const secsTotal = getDuration(ex);
+    const mins = Math.floor(secsTotal / 60);
+    const secs = secsTotal % 60;
+    const single = mins > 0 && secs > 0
+      ? `${mins}分${secs}秒`
+      : mins > 0
+        ? `${mins}分钟`
+        : `${secs}秒`;
+    const sets = getSetCount(ex);
+    return sets > 1 ? `${sets}组 × ${single}` : single;
   }
-  if (ex.sets > 1) return `${ex.sets}\u00d7${ex.reps}`;
+  const sets = getSetCount(ex);
+  if (sets > 1) return `${sets}\u00d7${ex.reps}`;
   return ex.reps || '';
 }
 
@@ -81,16 +82,21 @@ function parseSetCountFromText(text) {
 
 // 获取实际组数
 export function getSetCount(ex) {
-  if (ex._editSets !== undefined) {
-    const inferred = parseSetCountFromText(ex._editSets);
-    if (inferred !== null) return inferred;
+  if (typeof ex.sets === 'number' && Number.isFinite(ex.sets) && ex.sets > 0) {
+    return Math.max(1, Math.floor(ex.sets));
+  }
+  if (typeof ex.sets === 'string') {
+    const inferredBySetText = parseSetCountFromText(ex.sets);
+    if (inferredBySetText !== null) return inferredBySetText;
+    const onlyNum = ex.sets.trim().match(/^(\d+)$/);
+    if (onlyNum) return Math.max(1, parseInt(onlyNum[1], 10));
   }
 
-  // 优先从 reps 描述提取显式组数，兜底兼容导入计划中的“3×15次”写法
+  // 兜底：从 reps 描述提取显式组数
   const inferredByReps = parseSetCountFromText(ex.reps);
   if (inferredByReps !== null) return inferredByReps;
 
-  return ex.sets || 1;
+  return 1;
 }
 
 export function isTimedMode(ex) {
@@ -98,12 +104,18 @@ export function isTimedMode(ex) {
 }
 
 export function getDuration(ex) {
-  return ex.duration || 45;
+  return asPositiveInt(ex.duration, 45);
+}
+
+export function exKey(planId, mi, ei, plans = [], userEdits = {}) {
+  const ex = getExercise(planId, mi, ei, plans, userEdits);
+  if (ex?.id) return ex.id;
+  return `${planId}_${mi}_${ei}`;
 }
 
 // 训练进度
-export function isSetDone(planId, mi, ei, setIdx, trainingProgress) {
-  return !!trainingProgress[`${exKey(planId, mi, ei)}_s${setIdx}`];
+export function isSetDone(planId, mi, ei, setIdx, trainingProgress, plans = [], userEdits = {}) {
+  return !!trainingProgress[`${exKey(planId, mi, ei, plans, userEdits)}_s${setIdx}`];
 }
 
 export function isExerciseDone(planId, mi, ei, plans, userEdits, trainingProgress) {
@@ -111,7 +123,7 @@ export function isExerciseDone(planId, mi, ei, plans, userEdits, trainingProgres
   if (!ex) return false;
   const totalSets = getSetCount(ex);
   for (let s = 0; s < totalSets; s++) {
-    if (!isSetDone(planId, mi, ei, s, trainingProgress)) return false;
+    if (!isSetDone(planId, mi, ei, s, trainingProgress, plans, userEdits)) return false;
   }
   return true;
 }
@@ -121,7 +133,8 @@ export function getPlanProgress(planId, plans, userEdits, trainingProgress) {
   if (!plan) return { done: 0, total: 0 };
   let done = 0, total = 0;
   plan.modules.forEach((mod, mi) => {
-    mod.exercises.forEach((_, ei) => {
+    const exercises = getModuleExercises(planId, mi, plans, userEdits);
+    exercises.forEach((_, ei) => {
       total++;
       if (isExerciseDone(planId, mi, ei, plans, userEdits, trainingProgress)) done++;
     });
@@ -130,30 +143,48 @@ export function getPlanProgress(planId, plans, userEdits, trainingProgress) {
 }
 
 export function isModuleActive(planId, mi, plans, userEdits, trainingProgress) {
-  const plan = getPlan(planId, plans);
-  if (!plan) return false;
-  for (let ei = 0; ei < plan.modules[mi].exercises.length; ei++) {
+  const exercises = getModuleExercises(planId, mi, plans, userEdits);
+  if (!exercises.length) return false;
+  for (let ei = 0; ei < exercises.length; ei++) {
     const ex = getExercise(planId, mi, ei, plans, userEdits);
     const totalSets = getSetCount(ex);
     if (isExerciseDone(planId, mi, ei, plans, userEdits, trainingProgress)) continue;
     for (let s = 0; s < totalSets; s++) {
-      if (isSetDone(planId, mi, ei, s, trainingProgress)) return true;
+      if (isSetDone(planId, mi, ei, s, trainingProgress, plans, userEdits)) return true;
     }
   }
   return false;
 }
 
 export function isModuleDone(planId, mi, plans, userEdits, trainingProgress) {
-  const plan = getPlan(planId, plans);
-  if (!plan) return false;
-  return plan.modules[mi].exercises.every((_, ei) =>
+  const exercises = getModuleExercises(planId, mi, plans, userEdits);
+  if (!exercises.length) return true;
+  return exercises.every((_, ei) =>
     isExerciseDone(planId, mi, ei, plans, userEdits, trainingProgress)
   );
 }
 
 // 休息时长
-export function getExerciseRest(planId, mi, ei, exerciseRest) {
-  return exerciseRest[exKey(planId, mi, ei)] || 60;
+export function getExerciseRest(planId, mi, ei, exerciseRest, plans = [], userEdits = {}) {
+  return exerciseRest[exKey(planId, mi, ei, plans, userEdits)] || 60;
+}
+
+export function getPlanGroupByPlanId(planId, catalog, fallbackStages = []) {
+  const groups = Array.isArray(catalog?.planGroups) ? catalog.planGroups : [];
+  for (const group of groups) {
+    if ((group.plans || []).some(p => p.id === planId)) return group;
+  }
+  const plan = getPlan(planId, flattenPlans(catalog));
+  const fallback = fallbackStages.find(s => s.id === plan?.stage);
+  return fallback || null;
+}
+
+export function flattenPlans(catalog) {
+  const out = [];
+  (catalog?.planGroups || []).forEach((group) => {
+    (group.plans || []).forEach((plan) => out.push(plan));
+  });
+  return out;
 }
 
 // UI 反馈

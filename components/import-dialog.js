@@ -4,6 +4,32 @@ import { importPlans } from '../services/plans.js';
 import { showToast } from '../utils/helpers.js';
 import { renderLibrary } from '../pages/library.js';
 
+function escapeHtml(text = '') {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function flattenV7Plans(data) {
+  const groups = data?.catalog?.planGroups;
+  if (!Array.isArray(groups)) return [];
+  const plans = [];
+  groups.forEach((group) => {
+    (Array.isArray(group?.plans) ? group.plans : []).forEach((plan) => {
+      plans.push({ ...plan, stage: plan.stage || group.id });
+    });
+  });
+  return plans;
+}
+
+function extractPlansForPreview(data) {
+  if (Array.isArray(data?.plans)) return data.plans;
+  return flattenV7Plans(data);
+}
+
 export function showImportDialog() {
   document.getElementById('importOverlay').classList.add('show');
   document.getElementById('importText').value = '';
@@ -29,13 +55,16 @@ export function previewImport() {
 
   try {
     const data = typeof text === 'string' ? JSON.parse(text) : text;
-    if (!data || !Array.isArray(data.plans)) throw new Error('格式错误');
+    const incomingPlans = extractPlansForPreview(data);
+    if (!incomingPlans.length) throw new Error('格式错误，需要包含 plans 或 catalog.planGroups');
 
     let html = '<div style="margin-bottom:8px;font-weight:700;">📋 导入预览</div>';
-    html += `<div style="font-size:13px;color:var(--text2);">共 ${data.plans.length} 个计划 · 策略：${strategy}</div>`;
+    html += `<div style="font-size:13px;color:var(--text2);">共 ${incomingPlans.length} 个计划 · 策略：${strategy}</div>`;
     const simulatedIds = new Set(state.plans.map(p => p.id));
 
-    data.plans.forEach(p => {
+    incomingPlans.forEach(p => {
+      const safePlanName = escapeHtml(p.name || '');
+      const safePlanId = escapeHtml(p.id || '');
       if (strategy === 'append') {
         let finalId = p.id;
         let counter = 2;
@@ -44,19 +73,19 @@ export function previewImport() {
         }
         simulatedIds.add(finalId);
         const renamed = finalId !== p.id;
-        html += `<div style="font-size:13px;padding:4px 0;${renamed ? 'color:var(--warning);' : ''}">➕ ${p.name} (${finalId})${renamed ? ' — 自动重命名' : ''}</div>`;
+        html += `<div style="font-size:13px;padding:4px 0;${renamed ? 'color:var(--warning);' : ''}">➕ ${safePlanName} (${escapeHtml(finalId)})${renamed ? ' — 自动重命名' : ''}</div>`;
         return;
       }
 
       const exists = simulatedIds.has(p.id);
       simulatedIds.add(p.id);
-      html += `<div style="font-size:13px;padding:4px 0;${exists ? 'color:var(--warning);' : ''}">${exists ? '🔄' : '➕'} ${p.name} (${p.id})${exists ? ' — 将覆盖' : ''}</div>`;
+      html += `<div style="font-size:13px;padding:4px 0;${exists ? 'color:var(--warning);' : ''}">${exists ? '🔄' : '➕'} ${safePlanName} (${safePlanId})${exists ? ' — 将覆盖' : ''}</div>`;
     });
 
     preview.innerHTML = html;
     confirmBtn.style.display = 'flex';
   } catch (e) {
-    preview.innerHTML = `<div style="color:var(--danger);">❌ 解析失败: ${e.message}</div>`;
+    preview.innerHTML = `<div style="color:var(--danger);">❌ 解析失败: ${escapeHtml(e.message)}</div>`;
     confirmBtn.style.display = 'none';
   }
 }

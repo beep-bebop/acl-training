@@ -2,11 +2,18 @@
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import { renderLibrary, toggleLibraryStage } from './pages/library.js';
-import { openPlanDetail, renderDetail, toggleDetailEditor, saveDetailEditor, flushDetailEditorChanges } from './pages/detail.js';
+import {
+  openPlanDetail, renderDetail, toggleDetailEditor,
+  saveDetailEditor, openAddExerciseDialog, closeAddExerciseDialog,
+  confirmAddExerciseDialog, syncAddExerciseDialogMode, enrichDetailWithModel, flushDetailEditorChanges
+} from './pages/detail.js';
 import { startTraining, renderTraining, toggleSet, setExerciseRest, saveExerciseTip, stopTrainingDurationTicker } from './pages/training.js';
 import { toggleInlineTimer } from './components/inline-timer.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
-import { resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans } from './pages/settings.js';
+import {
+  resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
+  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs
+} from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import {
   skipTimer, cancelTimer, pauseTimer,
@@ -57,6 +64,7 @@ function navigateTo(pageId) {
       navBack.classList.add('hidden'); navTitle.textContent = '设置';
       if (topNav) topNav.classList.remove('nav-hidden');
       if (content) content.classList.remove('no-top-nav');
+      hydrateAiConfigInputs();
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden'); break;
   }
 
@@ -124,6 +132,19 @@ function setupEventDelegation() {
       return;
     }
 
+    const enrichBtn = e.target.closest('[data-ai-enrich]');
+    if (enrichBtn) {
+      const [mi, ei] = enrichBtn.dataset.aiEnrich.split('|');
+      enrichDetailWithModel(parseInt(mi, 10), parseInt(ei, 10));
+      return;
+    }
+
+    const addEx = e.target.closest('[data-add-ex]');
+    if (addEx) {
+      openAddExerciseDialog(parseInt(addEx.dataset.addEx, 10));
+      return;
+    }
+
     const btn = e.target.closest('[data-start-training]');
     if (btn) {
       flushDetailEditorChanges();
@@ -131,6 +152,30 @@ function setupEventDelegation() {
       navigateTo('pageTraining');
       renderTraining();
     }
+  });
+
+  document.getElementById('addExerciseOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'addExerciseOverlay') { closeAddExerciseDialog(); return; }
+    if (e.target.closest('[data-add-ex-cancel]')) { closeAddExerciseDialog(); return; }
+    if (e.target.closest('[data-add-ex-confirm]')) { confirmAddExerciseDialog(); }
+  });
+
+  // 计划详情 - 动作类型切换时，动态切换编辑字段
+  document.getElementById('detailContent').addEventListener('change', (e) => {
+    const modeSelect = e.target.closest('[data-edit-field="mode"]');
+    if (!modeSelect) return;
+    const item = modeSelect.closest('.detail-ex-item');
+    if (!item) return;
+    const mode = modeSelect.value === 'timed' ? 'timed' : 'counted';
+    item.querySelectorAll('[data-mode-panel]').forEach(panel => {
+      panel.classList.toggle('hidden', panel.dataset.modePanel !== mode);
+    });
+  });
+
+  document.getElementById('addExerciseOverlay').addEventListener('change', (e) => {
+    const modeSelect = e.target.closest('[data-add-ex-mode]');
+    if (!modeSelect) return;
+    syncAddExerciseDialogMode(modeSelect.value);
   });
 
   // 训练页面 - 模块折叠
@@ -145,7 +190,8 @@ function setupEventDelegation() {
     // 组按钮
     const setBtn = e.target.closest('[data-toggle-set]');
     if (setBtn) {
-      const [planId, mi, ei, si] = setBtn.dataset.toggleSet.split('|');
+      const [planIdRaw, mi, ei, si] = setBtn.dataset.toggleSet.split('|');
+      const planId = decodeURIComponent(planIdRaw || '');
       toggleSet(planId, parseInt(mi), parseInt(ei), parseInt(si));
       return;
     }
@@ -170,7 +216,8 @@ function setupEventDelegation() {
     // 休息时长设置
     const restBtn = e.target.closest('[data-set-rest]');
     if (restBtn) {
-      const [planId, mi, ei, secs] = restBtn.dataset.setRest.split('|');
+      const [planIdRaw, mi, ei, secs] = restBtn.dataset.setRest.split('|');
+      const planId = decodeURIComponent(planIdRaw || '');
       setExerciseRest(planId, parseInt(mi), parseInt(ei), parseInt(secs));
       return;
     }
@@ -178,8 +225,10 @@ function setupEventDelegation() {
     // 快捷保存执行要点
     const saveTipBtn = e.target.closest('[data-save-tip]');
     if (saveTipBtn) {
-      const [planId, mi, ei] = saveTipBtn.dataset.saveTip.split('|');
-      const input = document.querySelector(`[data-tip-input="${planId}|${mi}|${ei}"]`);
+      const [planIdRaw, mi, ei] = saveTipBtn.dataset.saveTip.split('|');
+      const planId = decodeURIComponent(planIdRaw || '');
+      const selectorPlanId = encodeURIComponent(planId);
+      const input = document.querySelector(`[data-tip-input="${selectorPlanId}|${mi}|${ei}"]`);
       saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), input ? input.value : '');
       return;
     }
@@ -189,7 +238,8 @@ function setupEventDelegation() {
   document.getElementById('trainingContent').addEventListener('focusout', (e) => {
     const tipInput = e.target.closest('[data-tip-input]');
     if (!tipInput) return;
-    const [planId, mi, ei] = tipInput.dataset.tipInput.split('|');
+    const [planIdRaw, mi, ei] = tipInput.dataset.tipInput.split('|');
+    const planId = decodeURIComponent(planIdRaw || '');
     saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value, true);
   });
 
@@ -199,7 +249,8 @@ function setupEventDelegation() {
     if (!tipInput) return;
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      const [planId, mi, ei] = tipInput.dataset.tipInput.split('|');
+      const [planIdRaw, mi, ei] = tipInput.dataset.tipInput.split('|');
+      const planId = decodeURIComponent(planIdRaw || '');
       saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value);
       tipInput.blur();
     }
@@ -220,6 +271,8 @@ function setupEventDelegation() {
     if (e.target.closest('[data-import]')) showImportDialog();
     if (e.target.closest('[data-export]')) exportPlans();
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
+    if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
+    if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
   });
 
   // 导入对话框
@@ -250,6 +303,7 @@ function setupEventDelegation() {
 // ===== 初始化 =====
 async function init() {
   await loadState();
+  hydrateAiConfigInputs();
   setupEventDelegation();
   navigateTo('pageLibrary');
   renderLibrary();

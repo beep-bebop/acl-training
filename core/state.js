@@ -5,16 +5,26 @@ export const state = {
   currentPage: 'pageLibrary',
   currentPlanId: null,
   isEditMode: false,
-  trainingSessionStartAt: null, // 当前训练会话开始时间（用于总时长展示）
 
-  // 数据
+  // canonical v7
+  catalog: { planGroups: [] },
+  runtime: {
+    progress: {},             // { [exerciseId_s0]: true }
+    exerciseRest: {},         // { [exerciseId]: rest seconds }
+    calendarLogs: {},         // 'YYYY-MM-DD' => [{ planId, exerciseId, name, planName, time }]
+    trainingDate: null,
+    trainingSessionStartAt: null,
+  },
+  settings: {
+    aiConfig: {
+      deepseekApiKey: '',
+      deepseekModel: 'deepseek-v4-flash',
+    },
+  },
+
+  // 兼容层（只保留派生数据）
   plans: [],
-  exerciseRest: {},       // key => rest seconds
-  calendarLogs: {},       // 'YYYY-MM-DD' => [{ planId, name, planName, time }]
-  trainingProgress: {},   // 每日训练进度
-  trainingDate: null,
-  userEdits: {},          // planId => { "mi_ei": { name, sets, tip } }
-  defaultPlansCache: null,
+  defaultCatalogCache: null,
   dataLoaded: false,
 
   // 日历
