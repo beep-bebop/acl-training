@@ -31,8 +31,13 @@ export async function resetPlansToDefault() {
 }
 
 export function exportPlans() {
+  const snapshot = getCurrentSnapshot();
+  // 安全默认：导出时不携带 API Key，避免误传泄露凭据。
+  if (snapshot.settings?.aiConfig) {
+    snapshot.settings.aiConfig.deepseekApiKey = '';
+  }
   const data = {
-    ...getCurrentSnapshot(),
+    ...snapshot,
     exportedAt: new Date().toISOString(),
   };
   const json = JSON.stringify(data, null, 2);
@@ -45,7 +50,7 @@ export function exportPlans() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('📤 已导出计划 JSON');
+  showToast('📤 已导出计划 JSON（已自动隐藏 API Key）');
 }
 
 export function copySchemaTemplate() {
