@@ -9,6 +9,8 @@ const DEFAULT_CUSTOM_GROUP = {
   name: '自定义计划',
   subtitle: '导入与自建',
   badge: '+',
+  coverEmoji: '🧩',
+  coverImage: '',
   color: '#8E8E93',
   gradient: 'linear-gradient(135deg, #8E8E93 0%, #636366 100%)',
   order: 999,
@@ -32,6 +34,14 @@ function asArray(value) {
 
 function cleanText(value) {
   return String(value || '').trim();
+}
+
+function normalizeCoverImage(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+  if (/^data:image\//i.test(text)) return text;
+  if (/^https?:\/\//i.test(text)) return text;
+  return '';
 }
 
 function todayStr() {
@@ -197,6 +207,8 @@ function normalizeGroup(rawGroup, ctx) {
     name: cleanText(raw.name) || id,
     subtitle: cleanText(raw.subtitle),
     badge: cleanText(raw.badge),
+    coverEmoji: cleanText(raw.coverEmoji || raw.badge),
+    coverImage: normalizeCoverImage(raw.coverImage),
     color: cleanText(raw.color),
     gradient: cleanText(raw.gradient),
     order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : ctx.groupIndex + 1,
@@ -210,6 +222,8 @@ function stageToGroup(stage) {
     name: stage.name,
     subtitle: stage.subtitle,
     badge: stage.badge,
+    coverEmoji: stage.badge,
+    coverImage: '',
     color: stage.color,
     gradient: stage.gradient,
     order: Number(stage.order) || 1,
@@ -226,6 +240,8 @@ function ensureGroup(catalog, groupInfo) {
     name: cleanText(groupInfo.name) || id,
     subtitle: cleanText(groupInfo.subtitle),
     badge: cleanText(groupInfo.badge),
+    coverEmoji: cleanText(groupInfo.coverEmoji || groupInfo.badge),
+    coverImage: normalizeCoverImage(groupInfo.coverImage),
     color: cleanText(groupInfo.color),
     gradient: cleanText(groupInfo.gradient),
     order: Number.isFinite(Number(groupInfo.order)) ? Number(groupInfo.order) : 999,

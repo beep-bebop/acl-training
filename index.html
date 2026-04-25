@@ -245,6 +245,55 @@
   </div>
 </div>
 
+<!-- 模块编辑弹层 -->
+<div class="timer-overlay" id="moduleEditorOverlay">
+  <div class="timer-panel add-ex-panel module-editor-panel">
+    <div class="time-label add-ex-title" id="moduleEditorTitle">🧩 编辑模块</div>
+
+    <div class="add-ex-form">
+      <label for="moduleNameInput">模块名称</label>
+      <input id="moduleNameInput" type="text" placeholder="例如：热身放松">
+
+      <label for="moduleTypeSelect">模块类型</label>
+      <select id="moduleTypeSelect">
+        <option value="warmup">warmup（热身）</option>
+        <option value="stretch">stretch（拉伸）</option>
+        <option value="activate">activate（激活）</option>
+        <option value="main">main（主训）</option>
+        <option value="core">core（核心）</option>
+        <option value="cooldown">cooldown（冷却）</option>
+        <option value="cardio">cardio（有氧）</option>
+        <option value="custom">custom（自定义）</option>
+      </select>
+
+      <label>模块 Emoji</label>
+      <div class="module-emoji-preview" id="moduleEmojiPreview">🧩</div>
+      <div class="module-emoji-grid" id="moduleEmojiGrid"></div>
+    </div>
+
+    <div class="add-ex-actions">
+      <button class="tba-close" type="button" data-module-cancel>取消</button>
+      <button class="add-ex-confirm-btn" type="button" data-module-confirm>保存模块</button>
+    </div>
+  </div>
+</div>
+
+<!-- 训练要点弹窗编辑器 -->
+<div class="timer-overlay" id="tipEditorOverlay">
+  <div class="timer-panel tip-editor-panel">
+    <div class="time-label tip-editor-title" id="tipEditorTitle">📋 编辑执行要点</div>
+    <textarea id="tipEditorInput" class="tip-editor-input" placeholder="输入要点、备注、链接（https://...）"></textarea>
+    <div class="tip-editor-links-wrap">
+      <div class="tip-editor-links-title">可点击链接</div>
+      <div id="tipEditorLinks" class="tip-editor-links"></div>
+    </div>
+    <div class="add-ex-actions">
+      <button class="tba-close" type="button" data-tip-editor-cancel>取消</button>
+      <button class="add-ex-confirm-btn" type="button" data-tip-editor-save>保存要点</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 

@@ -14,6 +14,7 @@ import { showTimerPill } from '../services/timer.js';
 import { logCalendar } from '../services/calendar.js';
 
 let trainingDurationTicker = null;
+let tipEditorContext = null;
 
 function escapeHtml(value = '') {
   return String(value)
@@ -26,6 +27,52 @@ function escapeHtml(value = '') {
 
 function sanitizeClassToken(value = '') {
   return String(value).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function extractLinks(text = '') {
+  const matches = String(text || '').match(/https?:\/\/[^\s<>"')]+/g) || [];
+  return Array.from(new Set(matches));
+}
+
+function linkifyText(text = '') {
+  const source = String(text || '');
+  if (!source.trim()) return '<span class="tip-preview-empty">暂无备注，点击「弹窗编辑」开始填写。</span>';
+
+  const regex = /https?:\/\/[^\s<>"')]+/g;
+  let result = '';
+  let last = 0;
+  let match;
+  while ((match = regex.exec(source)) !== null) {
+    const start = match.index;
+    const url = match[0];
+    result += escapeHtml(source.slice(last, start));
+    result += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+    last = start + url.length;
+  }
+  result += escapeHtml(source.slice(last));
+  return result.replace(/\n/g, '<br>');
+}
+
+function getTipEditorEls() {
+  return {
+    overlay: document.getElementById('tipEditorOverlay'),
+    title: document.getElementById('tipEditorTitle'),
+    input: document.getElementById('tipEditorInput'),
+    links: document.getElementById('tipEditorLinks'),
+  };
+}
+
+function renderTipEditorLinks(text) {
+  const els = getTipEditorEls();
+  if (!els.links) return;
+  const links = extractLinks(text);
+  if (!links.length) {
+    els.links.innerHTML = '<span class="tip-link-empty">当前内容中没有可跳转链接</span>';
+    return;
+  }
+  els.links.innerHTML = links.map(link => (
+    `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a>`
+  )).join('');
 }
 
 function formatElapsed(totalSeconds) {
@@ -61,6 +108,47 @@ export function stopTrainingDurationTicker() {
     clearInterval(trainingDurationTicker);
     trainingDurationTicker = null;
   }
+}
+
+export function openTrainingTipEditor(planId, mi, ei) {
+  const ex = getExercise(planId, mi, ei, state.plans, {});
+  if (!ex) return;
+  const els = getTipEditorEls();
+  if (!els.overlay || !els.input) return;
+  tipEditorContext = { planId, mi, ei };
+  if (els.title) {
+    els.title.textContent = `📋 编辑要点：${ex.name || '动作'}`;
+  }
+  els.input.value = ex.tip || '';
+  renderTipEditorLinks(els.input.value);
+  els.overlay.classList.add('show');
+  setTimeout(() => els.input.focus(), 0);
+}
+
+export function handleTrainingTipEditorInput() {
+  const els = getTipEditorEls();
+  if (!els.input) return;
+  renderTipEditorLinks(els.input.value);
+}
+
+export function closeTrainingTipEditor() {
+  const els = getTipEditorEls();
+  if (els.overlay) els.overlay.classList.remove('show');
+  tipEditorContext = null;
+}
+
+export function saveTrainingTipEditor() {
+  if (!tipEditorContext) return;
+  const els = getTipEditorEls();
+  if (!els.input) return;
+  saveExerciseTip(
+    tipEditorContext.planId,
+    tipEditorContext.mi,
+    tipEditorContext.ei,
+    els.input.value
+  );
+  closeTrainingTipEditor();
+  renderTraining();
 }
 
 export function startTraining(planId) {
@@ -167,7 +255,7 @@ export function renderTraining() {
       const setsStr = getSetsDisplay(actualEx);
       const safeExName = escapeHtml(actualEx.name || '');
       const safeSetsStr = escapeHtml(setsStr || '');
-      const safeTip = escapeHtml(actualEx.tip || '');
+      const tipPreviewHtml = linkifyText(actualEx.tip || '');
 
       let doneSets = 0;
       for (let s = 0; s < totalSets; s++) {
@@ -223,10 +311,10 @@ export function renderTraining() {
         <div class="ex-detail" id="detail_${keyToken}">
           <div class="ex-detail-inner">
             <div class="tip-head-row">
-              <div class="tip-label">📋 执行要点（训练中可直接编辑）</div>
-              <button class="tip-save-btn" data-save-tip="${encodedPlanId}|${mi}|${ei}" type="button">保存</button>
+              <div class="tip-label">📋 执行要点</div>
+              <button class="tip-save-btn" data-open-tip-editor="${encodedPlanId}|${mi}|${ei}" type="button">弹窗编辑</button>
             </div>
-            <textarea class="tip-edit-input" data-tip-input="${encodedPlanId}|${mi}|${ei}" placeholder="例如：膝盖保持对齐第二脚趾，避免内扣。">${safeTip}</textarea>
+            <div class="tip-preview-text">${tipPreviewHtml}</div>
             ${totalSets > 1 ? restHtml : ''}
           </div>
         </div>`;

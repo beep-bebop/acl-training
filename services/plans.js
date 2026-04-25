@@ -23,12 +23,22 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeCoverImage(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^data:image\//i.test(text)) return text;
+  if (/^https?:\/\//i.test(text)) return text;
+  return '';
+}
+
 function stageToGroup(stage) {
   return {
     id: stage.id,
     name: stage.name,
     subtitle: stage.subtitle,
     badge: stage.badge,
+    coverEmoji: stage.badge,
+    coverImage: '',
     color: stage.color,
     gradient: stage.gradient,
     order: stage.order,
@@ -45,6 +55,8 @@ function ensureGroup(catalog, sourceGroup) {
     name: String(sourceGroup?.name || id),
     subtitle: String(sourceGroup?.subtitle || ''),
     badge: String(sourceGroup?.badge || ''),
+    coverEmoji: String(sourceGroup?.coverEmoji || sourceGroup?.badge || ''),
+    coverImage: normalizeCoverImage(sourceGroup?.coverImage),
     color: String(sourceGroup?.color || '#8E8E93'),
     gradient: String(sourceGroup?.gradient || '#8E8E93'),
     order: Number(sourceGroup?.order) || 999,

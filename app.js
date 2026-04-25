@@ -1,13 +1,22 @@
 // ACL 康复训练 - 入口模块（导航 + 事件委托 + 初始化）
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
-import { renderLibrary, toggleLibraryStage } from './pages/library.js';
+import {
+  renderLibrary, toggleLibraryStage, toggleLibraryManageMode, isLibraryManageMode,
+  addPlanGroup, removePlanGroup, updatePlanGroupText, setPlanGroupEmoji,
+  setPlanGroupRandomArt, clearPlanGroupCoverArt, setPlanGroupCoverImageFromFile,
+  addPlanToGroup, removePlanById, updatePlanName, setPlanEmoji, decodeLibraryToken
+} from './pages/library.js';
 import {
   openPlanDetail, renderDetail, toggleDetailEditor,
   saveDetailEditor, openAddExerciseDialog, closeAddExerciseDialog,
-  confirmAddExerciseDialog, syncAddExerciseDialogMode, enrichDetailWithModel, flushDetailEditorChanges
+  confirmAddExerciseDialog, syncAddExerciseDialogMode, enrichDetailWithModel, flushDetailEditorChanges,
+  openModuleDialog, closeModuleDialog, confirmModuleDialog, pickModuleDialogEmoji, removeDetailModule
 } from './pages/detail.js';
-import { startTraining, renderTraining, toggleSet, setExerciseRest, saveExerciseTip, stopTrainingDurationTicker } from './pages/training.js';
+import {
+  startTraining, renderTraining, toggleSet, setExerciseRest, stopTrainingDurationTicker,
+  openTrainingTipEditor, handleTrainingTipEditorInput, closeTrainingTipEditor, saveTrainingTipEditor
+} from './pages/training.js';
 import { toggleInlineTimer } from './components/inline-timer.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
@@ -102,17 +111,112 @@ function setupEventDelegation() {
 
   // 计划库 - 点击计划卡片
   document.getElementById('libraryContent').addEventListener('click', (e) => {
+    if (e.target.closest('.drag-handle')) return;
+
+    const toggleManage = e.target.closest('[data-toggle-library-manage]');
+    if (toggleManage) {
+      toggleLibraryManageMode();
+      return;
+    }
+
+    const addGroupBtn = e.target.closest('[data-add-group]');
+    if (addGroupBtn) {
+      addPlanGroup();
+      return;
+    }
+
+    const addPlanBtn = e.target.closest('[data-add-plan]');
+    if (addPlanBtn) {
+      addPlanToGroup(decodeLibraryToken(addPlanBtn.dataset.addPlan));
+      return;
+    }
+
+    const delGroupBtn = e.target.closest('[data-delete-group]');
+    if (delGroupBtn) {
+      removePlanGroup(decodeLibraryToken(delGroupBtn.dataset.deleteGroup));
+      return;
+    }
+
+    const groupEmojiBtn = e.target.closest('[data-group-emoji]');
+    if (groupEmojiBtn) {
+      const [groupToken, emojiToken] = groupEmojiBtn.dataset.groupEmoji.split('|');
+      setPlanGroupEmoji(decodeLibraryToken(groupToken), decodeLibraryToken(emojiToken));
+      return;
+    }
+
+    const groupArtBtn = e.target.closest('[data-group-random-art]');
+    if (groupArtBtn) {
+      setPlanGroupRandomArt(decodeLibraryToken(groupArtBtn.dataset.groupRandomArt));
+      return;
+    }
+
+    const groupClearBtn = e.target.closest('[data-group-clear-art]');
+    if (groupClearBtn) {
+      clearPlanGroupCoverArt(decodeLibraryToken(groupClearBtn.dataset.groupClearArt));
+      return;
+    }
+
+    const planEmojiBtn = e.target.closest('[data-plan-emoji]');
+    if (planEmojiBtn) {
+      const [planToken, emojiToken] = planEmojiBtn.dataset.planEmoji.split('|');
+      setPlanEmoji(decodeLibraryToken(planToken), decodeLibraryToken(emojiToken));
+      return;
+    }
+
+    const openPlanBtn = e.target.closest('[data-open-plan]');
+    if (openPlanBtn) {
+      const planId = decodeLibraryToken(openPlanBtn.dataset.openPlan);
+      openPlanDetail(planId);
+      navigateTo('pageDetail');
+      renderDetail();
+      return;
+    }
+
+    const delPlanBtn = e.target.closest('[data-delete-plan]');
+    if (delPlanBtn) {
+      removePlanById(decodeLibraryToken(delPlanBtn.dataset.deletePlan));
+      return;
+    }
+
     const stageToggle = e.target.closest('[data-toggle-stage]');
     if (stageToggle) {
       toggleLibraryStage(stageToggle.dataset.toggleStage);
       return;
     }
 
+    if (isLibraryManageMode()) return;
+
     const card = e.target.closest('[data-plan-id]');
     if (card) {
       const planId = openPlanDetail(card.dataset.planId);
       navigateTo('pageDetail');
       renderDetail();
+    }
+  });
+
+  document.getElementById('libraryContent').addEventListener('change', async (e) => {
+    const groupNameInput = e.target.closest('[data-group-name-input]');
+    if (groupNameInput) {
+      updatePlanGroupText(decodeLibraryToken(groupNameInput.dataset.groupNameInput), 'name', groupNameInput.value);
+      return;
+    }
+
+    const groupSubtitleInput = e.target.closest('[data-group-subtitle-input]');
+    if (groupSubtitleInput) {
+      updatePlanGroupText(decodeLibraryToken(groupSubtitleInput.dataset.groupSubtitleInput), 'subtitle', groupSubtitleInput.value);
+      return;
+    }
+
+    const planNameInput = e.target.closest('[data-plan-name-input]');
+    if (planNameInput) {
+      updatePlanName(decodeLibraryToken(planNameInput.dataset.planNameInput), planNameInput.value);
+      return;
+    }
+
+    const groupUpload = e.target.closest('[data-group-upload]');
+    if (groupUpload && groupUpload.files && groupUpload.files[0]) {
+      await setPlanGroupCoverImageFromFile(decodeLibraryToken(groupUpload.dataset.groupUpload), groupUpload.files[0]);
+      groupUpload.value = '';
     }
   });
 
@@ -145,10 +249,28 @@ function setupEventDelegation() {
       return;
     }
 
+    const addModule = e.target.closest('[data-add-module]');
+    if (addModule) {
+      openModuleDialog();
+      return;
+    }
+
+    const editModule = e.target.closest('[data-edit-module]');
+    if (editModule) {
+      openModuleDialog(parseInt(editModule.dataset.editModule, 10));
+      return;
+    }
+
+    const delModule = e.target.closest('[data-del-module]');
+    if (delModule) {
+      removeDetailModule(parseInt(delModule.dataset.delModule, 10));
+      return;
+    }
+
     const btn = e.target.closest('[data-start-training]');
     if (btn) {
       flushDetailEditorChanges();
-      startTraining(btn.dataset.startTraining);
+      startTraining(decodeURIComponent(btn.dataset.startTraining || ''));
       navigateTo('pageTraining');
       renderTraining();
     }
@@ -158,6 +280,45 @@ function setupEventDelegation() {
     if (e.target.id === 'addExerciseOverlay') { closeAddExerciseDialog(); return; }
     if (e.target.closest('[data-add-ex-cancel]')) { closeAddExerciseDialog(); return; }
     if (e.target.closest('[data-add-ex-confirm]')) { confirmAddExerciseDialog(); }
+  });
+
+  document.getElementById('moduleEditorOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'moduleEditorOverlay') { closeModuleDialog(); return; }
+    if (e.target.closest('[data-module-cancel]')) { closeModuleDialog(); return; }
+    if (e.target.closest('[data-module-confirm]')) { confirmModuleDialog(); return; }
+    const emojiBtn = e.target.closest('[data-module-emoji]');
+    if (emojiBtn) {
+      pickModuleDialogEmoji(decodeURIComponent(emojiBtn.dataset.moduleEmoji || ''));
+    }
+  });
+
+  document.getElementById('moduleEditorOverlay').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      confirmModuleDialog();
+    }
+  });
+
+  document.getElementById('tipEditorOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'tipEditorOverlay') { closeTrainingTipEditor(); return; }
+    if (e.target.closest('[data-tip-editor-cancel]')) { closeTrainingTipEditor(); return; }
+    if (e.target.closest('[data-tip-editor-save]')) { saveTrainingTipEditor(); }
+  });
+
+  document.getElementById('tipEditorInput').addEventListener('input', () => {
+    handleTrainingTipEditorInput();
+  });
+
+  document.getElementById('tipEditorInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeTrainingTipEditor();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      saveTrainingTipEditor();
+    }
   });
 
   // 计划详情 - 动作类型切换时，动态切换编辑字段
@@ -222,37 +383,12 @@ function setupEventDelegation() {
       return;
     }
 
-    // 快捷保存执行要点
-    const saveTipBtn = e.target.closest('[data-save-tip]');
-    if (saveTipBtn) {
-      const [planIdRaw, mi, ei] = saveTipBtn.dataset.saveTip.split('|');
+    const openTipEditorBtn = e.target.closest('[data-open-tip-editor]');
+    if (openTipEditorBtn) {
+      const [planIdRaw, mi, ei] = openTipEditorBtn.dataset.openTipEditor.split('|');
       const planId = decodeURIComponent(planIdRaw || '');
-      const selectorPlanId = encodeURIComponent(planId);
-      const input = document.querySelector(`[data-tip-input="${selectorPlanId}|${mi}|${ei}"]`);
-      saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), input ? input.value : '');
+      openTrainingTipEditor(planId, parseInt(mi, 10), parseInt(ei, 10));
       return;
-    }
-  });
-
-  // 训练页 - 执行要点输入自动保存（失焦）
-  document.getElementById('trainingContent').addEventListener('focusout', (e) => {
-    const tipInput = e.target.closest('[data-tip-input]');
-    if (!tipInput) return;
-    const [planIdRaw, mi, ei] = tipInput.dataset.tipInput.split('|');
-    const planId = decodeURIComponent(planIdRaw || '');
-    saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value, true);
-  });
-
-  // 训练页 - Ctrl/Cmd + Enter 快速保存
-  document.getElementById('trainingContent').addEventListener('keydown', (e) => {
-    const tipInput = e.target.closest('[data-tip-input]');
-    if (!tipInput) return;
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      const [planIdRaw, mi, ei] = tipInput.dataset.tipInput.split('|');
-      const planId = decodeURIComponent(planIdRaw || '');
-      saveExerciseTip(planId, parseInt(mi, 10), parseInt(ei, 10), tipInput.value);
-      tipInput.blur();
     }
   });
 

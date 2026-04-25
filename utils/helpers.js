@@ -187,6 +187,46 @@ export function flattenPlans(catalog) {
   return out;
 }
 
+export function pruneRuntimeByPlans(plans, runtime) {
+  const safePlans = Array.isArray(plans) ? plans : [];
+  const safeRuntime = runtime && typeof runtime === 'object' ? runtime : {};
+  const planIds = new Set(safePlans.map(p => p?.id).filter(Boolean));
+  const exerciseIds = new Set();
+  safePlans.forEach((plan) => {
+    (plan?.modules || []).forEach((mod) => {
+      (mod?.exercises || []).forEach((ex) => {
+        if (ex?.id) exerciseIds.add(ex.id);
+      });
+    });
+  });
+
+  safeRuntime.progress = Object.fromEntries(
+    Object.entries(safeRuntime.progress || {}).filter(([key, value]) => {
+      if (!value) return false;
+      const m = String(key).match(/^(.*)_s\d+$/);
+      if (!m) return false;
+      return exerciseIds.has(m[1]);
+    })
+  );
+
+  safeRuntime.exerciseRest = Object.fromEntries(
+    Object.entries(safeRuntime.exerciseRest || {}).filter(([key]) => exerciseIds.has(key))
+  );
+
+  safeRuntime.calendarLogs = Object.fromEntries(
+    Object.entries(safeRuntime.calendarLogs || {}).map(([date, logs]) => {
+      const kept = (Array.isArray(logs) ? logs : []).filter((log) => {
+        if (!planIds.has(log?.planId)) return false;
+        if (!log?.exerciseId) return true;
+        return exerciseIds.has(log.exerciseId);
+      });
+      return [date, kept];
+    }).filter(([, logs]) => logs.length)
+  );
+
+  return safeRuntime;
+}
+
 // UI 反馈
 export function showToast(msg) {
   const t = document.getElementById('toast');

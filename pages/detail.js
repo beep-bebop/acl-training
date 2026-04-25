@@ -4,15 +4,19 @@ import { STAGES } from '../data/config.js';
 import { saveToStorage } from '../core/storage.js';
 import {
   getStage, getPlan, getExercise, getModuleExercises,
-  getSetsDisplay, getSetCount, getDuration, getPlanProgress, showToast, getPlanGroupByPlanId
+  getSetsDisplay, getSetCount, getDuration, getPlanProgress, showToast, getPlanGroupByPlanId, pruneRuntimeByPlans
 } from '../utils/helpers.js';
 import { enrichExerciseDetailByAI } from '../services/ai-enrich.js';
+import { mountDetailModuleSorter } from '../services/drag-sort.js';
 
 const DOT_COLORS = { warmup: '#34C759', stretch: '#5AC8FA', activate: '#FF9500', main: '#5856D6', core: '#FF2D55', cooldown: '#5AC8FA', cardio: '#FF3B30', custom: '#8E8E93' };
 const TIMED_MODULE_TYPES = new Set(['warmup', 'stretch', 'cooldown']);
+const MODULE_ICON_CANDIDATES = ['🧘', '🤸', '⚡', '💪', '🎯', '🔥', '🌙', '🏃', '🛡️', '🧩', '🦵', '🏋️'];
 let activeEditorKey = null;
 let pendingAddModuleIdx = null;
 let enrichingKey = null;
+let editingModuleIdx = null;
+let pendingModuleEmoji = '🧩';
 
 function editorKey(mi, ei) {
   return `${mi}_${ei}`;
@@ -78,6 +82,55 @@ export function syncAddExerciseDialogMode(mode) {
   if (els.timedWrap) els.timedWrap.classList.toggle('hidden', actualMode !== 'timed');
 }
 
+function normalizeModuleType(type) {
+  const safe = sanitizeClassToken(type || 'custom');
+  return safe || 'custom';
+}
+
+function nextModuleId(plan) {
+  const existing = new Set((plan.modules || []).map(m => m?.id).filter(Boolean));
+  let idx = 1;
+  let id = `${plan.id}__m${idx}`;
+  while (existing.has(id)) {
+    idx++;
+    id = `${plan.id}__m${idx}`;
+  }
+  return id;
+}
+
+function reorderModules(from, to) {
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan || !Array.isArray(plan.modules)) return;
+  if (from < 0 || to < 0 || from >= plan.modules.length || to >= plan.modules.length) return;
+  const [module] = plan.modules.splice(from, 1);
+  plan.modules.splice(to, 0, module);
+  activeEditorKey = null;
+  saveToStorage();
+  renderDetail();
+  showToast('↕️ 模块顺序已更新');
+}
+
+function getModuleDialogEls() {
+  return {
+    overlay: document.getElementById('moduleEditorOverlay'),
+    title: document.getElementById('moduleEditorTitle'),
+    name: document.getElementById('moduleNameInput'),
+    type: document.getElementById('moduleTypeSelect'),
+    emojiPreview: document.getElementById('moduleEmojiPreview'),
+    emojiGrid: document.getElementById('moduleEmojiGrid'),
+  };
+}
+
+function renderModuleEmojiGrid(selectedEmoji) {
+  const els = getModuleDialogEls();
+  if (!els.emojiGrid) return;
+  els.emojiGrid.innerHTML = MODULE_ICON_CANDIDATES.map((emoji) => {
+    const active = emoji === selectedEmoji ? ' active' : '';
+    return `<button class="emoji-chip${active}" type="button" data-module-emoji="${encodeURIComponent(emoji)}">${escapeHtml(emoji)}</button>`;
+  }).join('');
+  if (els.emojiPreview) els.emojiPreview.textContent = selectedEmoji || '🧩';
+}
+
 function persistEditorByKey(key, { toast = false } = {}) {
   if (!state.currentPlanId || !key) return;
 
@@ -124,16 +177,20 @@ export function openPlanDetail(planId) {
   state.isEditMode = false;
   activeEditorKey = null;
   pendingAddModuleIdx = null;
+  editingModuleIdx = null;
   return planId; // 返回给 app.js 做导航
 }
 
 export function renderDetail() {
   const plan = getPlan(state.currentPlanId, state.plans);
-  if (!plan) return;
+  if (!plan) {
+    mountDetailModuleSorter({ enabled: false });
+    return;
+  }
   const stage = getPlanGroupByPlanId(plan.id, state.catalog, STAGES) || getStage(plan.stage, STAGES);
   const container = document.getElementById('detailContent');
   const modules = Array.isArray(plan.modules) ? plan.modules : [];
-  const safeCurrentPlanId = escapeHtml(state.currentPlanId || '');
+  const encodedCurrentPlanId = encodeURIComponent(state.currentPlanId || '');
 
   document.getElementById('navTitle').textContent = plan.icon + ' ' + plan.name;
 
@@ -142,7 +199,11 @@ export function renderDetail() {
   html += `<div class="detail-plan-name">${escapeHtml(plan.name)}</div>`;
   const exCount = modules.reduce((sum, _m, mi) => sum + getModuleExercises(state.currentPlanId, mi, state.plans, {}).length, 0);
   html += `<div class="detail-plan-desc">${modules.length} 个模块 · ${exCount} 个动作</div>`;
+  html += '<div class="detail-module-toolbar">';
+  html += '<button class="detail-module-main-btn" type="button" data-add-module>+ 新增模块</button>';
+  html += '</div>';
 
+  html += '<div id="detailModuleList">';
   modules.forEach((mod, mi) => {
     const safeModType = sanitizeClassToken(mod.type || 'custom');
     const dotColor = DOT_COLORS[safeModType] || '#8E8E93';
@@ -151,7 +212,15 @@ export function renderDetail() {
     html += `<div class="detail-module"><div class="detail-module-head">`;
     html += `<div class="detail-module-icon ${safeModType}">${safeModIcon}</div>`;
     html += `<div class="detail-module-info"><div class="detail-module-name">${escapeHtml(mod.name)}</div>`;
-    html += `<div class="detail-module-count">${moduleExercises.length} 个动作</div></div></div>`;
+    html += `<div class="detail-module-count">${moduleExercises.length} 个动作</div></div>`;
+    html += '<div class="detail-module-actions">';
+    if (modules.length > 1) {
+      html += '<button class="detail-module-action-btn drag-handle-module" type="button" title="拖拽排序">⋮⋮</button>';
+    }
+    html += `<button class="detail-module-action-btn" type="button" data-edit-module="${mi}">编辑</button>`;
+    html += `<button class="detail-module-action-btn danger" type="button" data-del-module="${mi}"${modules.length <= 1 ? ' disabled' : ''}>删除</button>`;
+    html += '</div>';
+    html += '</div>';
 
     html += '<div class="detail-exercises">';
     moduleExercises.forEach((_ex, ei) => {
@@ -205,12 +274,17 @@ export function renderDetail() {
 
     html += '</div>';
   });
+  html += '</div>';
 
   const prog = getPlanProgress(state.currentPlanId, state.plans, {}, state.runtime.progress);
   const btnText = prog.done > 0 ? `继续训练 (${prog.done}/${prog.total})` : '开始训练';
-  html += `<button class="start-training-btn" data-start-training="${safeCurrentPlanId}">💪 ${btnText}</button>`;
+  html += `<button class="start-training-btn" data-start-training="${encodedCurrentPlanId}">💪 ${btnText}</button>`;
   html += '</div>';
   container.innerHTML = html;
+  mountDetailModuleSorter({
+    enabled: modules.length > 1,
+    onReorder: (from, to) => reorderModules(from, to),
+  });
 
   if (activeEditorKey) {
     const currentEditor = container.querySelector(`.detail-ex-item[data-edit-key="${activeEditorKey}"] [data-edit-field="name"]`);
@@ -238,6 +312,92 @@ export function saveDetailEditor(mi, ei) {
   persistEditorByKey(key, { toast: true });
   activeEditorKey = null;
   renderDetail();
+}
+
+export function openModuleDialog(mi = null) {
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan) return;
+  if (activeEditorKey) persistEditorByKey(activeEditorKey);
+  const els = getModuleDialogEls();
+  if (!els.overlay) return;
+  const module = Number.isInteger(mi) ? plan.modules?.[mi] : null;
+  editingModuleIdx = Number.isInteger(mi) ? mi : null;
+
+  if (module) {
+    pendingModuleEmoji = module.icon || '🧩';
+    if (els.title) els.title.textContent = '🧩 编辑模块';
+    if (els.name) els.name.value = module.name || '';
+    if (els.type) els.type.value = normalizeModuleType(module.type);
+  } else {
+    pendingModuleEmoji = '🧩';
+    if (els.title) els.title.textContent = '➕ 新增模块';
+    if (els.name) els.name.value = '新模块';
+    if (els.type) els.type.value = 'custom';
+  }
+  renderModuleEmojiGrid(pendingModuleEmoji);
+  els.overlay.classList.add('show');
+  if (els.name) setTimeout(() => els.name.focus(), 0);
+}
+
+export function closeModuleDialog() {
+  const els = getModuleDialogEls();
+  if (els.overlay) els.overlay.classList.remove('show');
+  editingModuleIdx = null;
+}
+
+export function pickModuleDialogEmoji(emoji) {
+  pendingModuleEmoji = String(emoji || '').trim() || '🧩';
+  renderModuleEmojiGrid(pendingModuleEmoji);
+}
+
+export function confirmModuleDialog() {
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan) return;
+  if (!Array.isArray(plan.modules)) plan.modules = [];
+  const els = getModuleDialogEls();
+  const name = (els.name?.value || '').trim() || '新模块';
+  const type = normalizeModuleType(els.type?.value || 'custom');
+  const icon = pendingModuleEmoji || '🧩';
+
+  if (editingModuleIdx === null || editingModuleIdx === undefined) {
+    plan.modules.push({
+      id: nextModuleId(plan),
+      name,
+      icon,
+      type,
+      exercises: [],
+    });
+    showToast('➕ 已新增模块');
+  } else {
+    const mod = plan.modules[editingModuleIdx];
+    if (!mod) return;
+    mod.name = name;
+    mod.icon = icon;
+    mod.type = type;
+    showToast('✅ 模块已更新');
+  }
+
+  saveToStorage();
+  closeModuleDialog();
+  renderDetail();
+}
+
+export function removeDetailModule(mi) {
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan || !Array.isArray(plan.modules) || !plan.modules[mi]) return;
+  if (plan.modules.length <= 1) {
+    showToast('⚠️ 至少保留 1 个模块');
+    return;
+  }
+  const mod = plan.modules[mi];
+  if (!confirm(`确定删除模块「${mod.name}」吗？其中动作将一并删除。`)) return;
+  plan.modules.splice(mi, 1);
+  activeEditorKey = null;
+  enrichingKey = null;
+  pruneRuntimeByPlans(state.plans, state.runtime);
+  saveToStorage();
+  renderDetail();
+  showToast('🗑 模块已删除');
 }
 
 export async function enrichDetailWithModel(mi, ei) {
@@ -379,5 +539,6 @@ export function flushDetailEditorChanges() {
   if (activeEditorKey) persistEditorByKey(activeEditorKey);
   enrichingKey = null;
   closeAddExerciseDialog();
+  closeModuleDialog();
   activeEditorKey = null;
 }
