@@ -2,16 +2,17 @@
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import {
-  renderLibrary, toggleLibraryStage, toggleLibraryManageMode, isLibraryManageMode,
-  addPlanGroup, removePlanGroup, updatePlanGroupText, setPlanGroupEmoji,
-  setPlanGroupRandomArt, clearPlanGroupCoverArt, setPlanGroupCoverImageFromFile,
+  renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
+  addPlanGroup, removePlanGroup, updatePlanGroupName,
+  setPlanGroupRandomArt,
   addPlanToGroup, removePlanById, updatePlanName, setPlanEmoji, decodeLibraryToken
 } from './pages/library.js';
 import {
   openPlanDetail, renderDetail, toggleDetailEditor,
   saveDetailEditor, openAddExerciseDialog, closeAddExerciseDialog,
   confirmAddExerciseDialog, syncAddExerciseDialogMode, enrichDetailWithModel, flushDetailEditorChanges,
-  openModuleDialog, closeModuleDialog, confirmModuleDialog, pickModuleDialogEmoji, removeDetailModule
+  openModuleDialog, closeModuleDialog, confirmModuleDialog, pickModuleDialogEmoji, removeDetailModule,
+  editModuleName, editModuleEmoji
 } from './pages/detail.js';
 import {
   startTraining, renderTraining, toggleSet, setExerciseRest, stopTrainingDurationTicker,
@@ -21,7 +22,7 @@ import { toggleInlineTimer } from './components/inline-timer.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
-  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs
+  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs, previewRemoteSync, applyRemoteSync
 } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import {
@@ -111,11 +112,9 @@ function setupEventDelegation() {
 
   // 计划库 - 点击计划卡片
   document.getElementById('libraryContent').addEventListener('click', (e) => {
-    if (e.target.closest('.drag-handle')) return;
-
-    const toggleManage = e.target.closest('[data-toggle-library-manage]');
-    if (toggleManage) {
-      toggleLibraryManageMode();
+    const toggleGroupSettings = e.target.closest('[data-toggle-group-settings]');
+    if (toggleGroupSettings) {
+      togglePlanGroupSettings(toggleGroupSettings.dataset.toggleGroupSettings || '');
       return;
     }
 
@@ -127,64 +126,42 @@ function setupEventDelegation() {
 
     const addPlanBtn = e.target.closest('[data-add-plan]');
     if (addPlanBtn) {
-      addPlanToGroup(decodeLibraryToken(addPlanBtn.dataset.addPlan));
+      addPlanToGroup(addPlanBtn.dataset.addPlan || '');
       return;
     }
 
     const delGroupBtn = e.target.closest('[data-delete-group]');
     if (delGroupBtn) {
-      removePlanGroup(decodeLibraryToken(delGroupBtn.dataset.deleteGroup));
-      return;
-    }
-
-    const groupEmojiBtn = e.target.closest('[data-group-emoji]');
-    if (groupEmojiBtn) {
-      const [groupToken, emojiToken] = groupEmojiBtn.dataset.groupEmoji.split('|');
-      setPlanGroupEmoji(decodeLibraryToken(groupToken), decodeLibraryToken(emojiToken));
+      removePlanGroup(delGroupBtn.dataset.deleteGroup || '');
       return;
     }
 
     const groupArtBtn = e.target.closest('[data-group-random-art]');
     if (groupArtBtn) {
-      setPlanGroupRandomArt(decodeLibraryToken(groupArtBtn.dataset.groupRandomArt));
-      return;
-    }
-
-    const groupClearBtn = e.target.closest('[data-group-clear-art]');
-    if (groupClearBtn) {
-      clearPlanGroupCoverArt(decodeLibraryToken(groupClearBtn.dataset.groupClearArt));
+      setPlanGroupRandomArt(groupArtBtn.dataset.groupRandomArt || '');
       return;
     }
 
     const planEmojiBtn = e.target.closest('[data-plan-emoji]');
     if (planEmojiBtn) {
       const [planToken, emojiToken] = planEmojiBtn.dataset.planEmoji.split('|');
-      setPlanEmoji(decodeLibraryToken(planToken), decodeLibraryToken(emojiToken));
-      return;
-    }
-
-    const openPlanBtn = e.target.closest('[data-open-plan]');
-    if (openPlanBtn) {
-      const planId = decodeLibraryToken(openPlanBtn.dataset.openPlan);
-      openPlanDetail(planId);
-      navigateTo('pageDetail');
-      renderDetail();
+      setPlanEmoji(planToken, decodeLibraryToken(emojiToken));
       return;
     }
 
     const delPlanBtn = e.target.closest('[data-delete-plan]');
     if (delPlanBtn) {
-      removePlanById(decodeLibraryToken(delPlanBtn.dataset.deletePlan));
+      removePlanById(delPlanBtn.dataset.deletePlan || '');
       return;
     }
 
     const stageToggle = e.target.closest('[data-toggle-stage]');
     if (stageToggle) {
-      toggleLibraryStage(stageToggle.dataset.toggleStage);
+      toggleLibraryStage(stageToggle.dataset.toggleStage || '');
       return;
     }
 
-    if (isLibraryManageMode()) return;
+    if (e.target.closest('.plan-manage-panel')) return;
 
     const card = e.target.closest('[data-plan-id]');
     if (card) {
@@ -197,26 +174,14 @@ function setupEventDelegation() {
   document.getElementById('libraryContent').addEventListener('change', async (e) => {
     const groupNameInput = e.target.closest('[data-group-name-input]');
     if (groupNameInput) {
-      updatePlanGroupText(decodeLibraryToken(groupNameInput.dataset.groupNameInput), 'name', groupNameInput.value);
-      return;
-    }
-
-    const groupSubtitleInput = e.target.closest('[data-group-subtitle-input]');
-    if (groupSubtitleInput) {
-      updatePlanGroupText(decodeLibraryToken(groupSubtitleInput.dataset.groupSubtitleInput), 'subtitle', groupSubtitleInput.value);
+      updatePlanGroupName(groupNameInput.dataset.groupNameInput || '', groupNameInput.value);
       return;
     }
 
     const planNameInput = e.target.closest('[data-plan-name-input]');
     if (planNameInput) {
-      updatePlanName(decodeLibraryToken(planNameInput.dataset.planNameInput), planNameInput.value);
+      updatePlanName(planNameInput.dataset.planNameInput || '', planNameInput.value);
       return;
-    }
-
-    const groupUpload = e.target.closest('[data-group-upload]');
-    if (groupUpload && groupUpload.files && groupUpload.files[0]) {
-      await setPlanGroupCoverImageFromFile(decodeLibraryToken(groupUpload.dataset.groupUpload), groupUpload.files[0]);
-      groupUpload.value = '';
     }
   });
 
@@ -255,9 +220,15 @@ function setupEventDelegation() {
       return;
     }
 
-    const editModule = e.target.closest('[data-edit-module]');
-    if (editModule) {
-      openModuleDialog(parseInt(editModule.dataset.editModule, 10));
+    const moduleNameBtn = e.target.closest('[data-module-edit-name]');
+    if (moduleNameBtn) {
+      editModuleName(parseInt(moduleNameBtn.dataset.moduleEditName, 10));
+      return;
+    }
+
+    const moduleEmojiBtn = e.target.closest('[data-module-edit-emoji]');
+    if (moduleEmojiBtn) {
+      editModuleEmoji(parseInt(moduleEmojiBtn.dataset.moduleEditEmoji, 10));
       return;
     }
 
@@ -406,6 +377,8 @@ function setupEventDelegation() {
     if (e.target.closest('[data-reset-defaults]')) resetPlansToDefault();
     if (e.target.closest('[data-import]')) showImportDialog();
     if (e.target.closest('[data-export]')) exportPlans();
+    if (e.target.closest('[data-preview-remote-sync]')) previewRemoteSync();
+    if (e.target.closest('[data-apply-remote-sync]')) applyRemoteSync();
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();

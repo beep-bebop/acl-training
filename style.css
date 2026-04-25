@@ -138,7 +138,14 @@ body::after {
   overflow: hidden;
 }
 .stage-header {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 10px;
+}
+.stage-toggle-btn {
+  flex: 1;
   appearance: none;
   border: none;
   background: transparent;
@@ -147,9 +154,30 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 14px 12px;
   text-align: left;
   cursor: pointer;
+  border-radius: 12px;
+  padding: 2px 0;
+}
+.stage-toggle-btn:active {
+  background: rgba(0,122,255,0.05);
+}
+.group-settings-btn {
+  border: 1px solid rgba(0,122,255,0.22);
+  background: rgba(0,122,255,0.08);
+  color: var(--primary);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.group-settings-btn.active {
+  background: rgba(0,122,255,0.16);
+}
+.group-settings-btn:active {
+  transform: scale(0.97);
 }
 .stage-header-main {
   display: flex;
@@ -162,33 +190,6 @@ body::after {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-.drag-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(0,122,255,0.2);
-  background: rgba(0,122,255,0.08);
-  color: var(--primary);
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 1;
-  letter-spacing: 1px;
-  cursor: grab;
-  user-select: none;
-}
-.drag-handle:active {
-  cursor: grabbing;
-  transform: scale(0.96);
-}
-.drag-handle-group {
-  width: 30px;
-  height: 30px;
-}
-.drag-handle-plan {
-  width: 30px;
-  height: 30px;
-  margin-left: auto;
 }
 .stage-badge {
   width: 36px; height: 36px; border-radius: 10px;
@@ -258,6 +259,13 @@ body::after {
   cursor: pointer; transition: all 0.2s;
 }
 .plan-card:active { transform: scale(0.98); background: rgba(255,255,255,0.9); }
+.plan-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
 .plan-card-icon {
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
@@ -416,11 +424,42 @@ body::after {
 .plan-card.manage .plan-card-arrow {
   margin-left: 0;
 }
+.plan-card.manage .plan-card-main {
+  cursor: pointer;
+}
 .plan-manage-panel {
   width: 100%;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed rgba(0,122,255,0.2);
+}
+.library-bottom-add-wrap {
+  margin: 18px 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.library-add-fab {
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #5856D6);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 300;
+  box-shadow: 0 10px 24px rgba(0,122,255,0.34);
+  cursor: pointer;
+}
+.library-add-fab:active {
+  transform: scale(0.95);
+}
+.library-add-label {
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 700;
 }
 
 /* ===== 计划详情页面 ===== */
@@ -446,11 +485,23 @@ body::after {
 .detail-module-head {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px;
+  user-select: none;
+  cursor: grab;
+}
+.detail-module-head:active {
+  cursor: grabbing;
 }
 .detail-module-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.detail-module-icon:active {
+  transform: scale(0.96);
 }
 .detail-module-icon.warmup   { background: rgba(52,199,89,0.12); }
 .detail-module-icon.stretch  { background: rgba(90,200,250,0.12); }
@@ -459,10 +510,29 @@ body::after {
 .detail-module-icon.core     { background: rgba(255,45,85,0.12); }
 
 .detail-module-info { flex:1; }
-.detail-module-name { font-size: 15px; font-weight: 700; }
+.detail-module-name-btn {
+  border: none;
+  background: transparent;
+  color: var(--text1);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.detail-module-name-btn:active {
+  color: var(--primary);
+}
 .detail-module-count { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .detail-module-toolbar {
   margin: 0 0 10px;
+}
+.detail-module-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.4;
+  text-align: center;
 }
 .detail-module-main-btn {
   width: 100%;
@@ -478,33 +548,24 @@ body::after {
 .detail-module-main-btn:active {
   transform: scale(0.98);
 }
-.detail-module-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.detail-module-action-btn {
-  border: 1px solid rgba(0,122,255,0.2);
-  background: rgba(0,122,255,0.08);
-  color: var(--primary);
+.detail-module-delete-btn {
+  border-color: rgba(255,59,48,0.25);
+  background: rgba(255,59,48,0.09);
+  color: var(--danger);
+  border: 1px solid rgba(255,59,48,0.25);
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
   padding: 6px 8px;
   cursor: pointer;
+  flex-shrink: 0;
 }
-.detail-module-action-btn.danger {
-  border-color: rgba(255,59,48,0.25);
-  background: rgba(255,59,48,0.09);
-  color: var(--danger);
+.detail-module-delete-btn:active {
+  transform: scale(0.96);
 }
-.detail-module-action-btn:disabled {
+.detail-module-delete-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-.detail-module-action-btn.drag-handle-module {
-  cursor: grab;
-  min-width: 30px;
 }
 
 .drag-ghost {

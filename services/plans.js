@@ -23,6 +23,21 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function buildSyncSummary({ remoteAdded, remoteUpdated, localOnlyKept }) {
+  return `新增 ${remoteAdded}，覆盖 ${remoteUpdated}，保留本地 ${localOnlyKept}`;
+}
+
+async function computeSha256(text) {
+  try {
+    const bytes = new TextEncoder().encode(String(text || ''));
+    const buffer = await crypto.subtle.digest('SHA-256', bytes);
+    const array = Array.from(new Uint8Array(buffer));
+    return array.map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch (_err) {
+    return '';
+  }
+}
+
 function normalizeCoverImage(value) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -98,6 +113,30 @@ function collectPlanIds(catalog) {
     (group.plans || []).forEach((plan) => ids.add(plan.id));
   });
   return ids;
+}
+
+function mergeRemoteCatalogWithLocalExtras(remoteCatalog, localCatalog) {
+  const merged = deepClone(remoteCatalog || { planGroups: [] });
+  const remotePlanIds = collectPlanIds(remoteCatalog || { planGroups: [] });
+  const localPlans = flattenPlansFromCatalog(localCatalog || { planGroups: [] });
+  localPlans.forEach((plan) => {
+    if (!plan?.id || remotePlanIds.has(plan.id)) return;
+    const localGroup = findPlanGroupByPlanId(localCatalog, plan.id);
+    const targetGroup = ensureGroup(
+      merged,
+      localGroup || {
+        id: plan.stage || 'custom',
+        name: plan.stage || 'custom',
+        subtitle: '',
+        order: 999,
+      }
+    );
+    const nextPlan = deepClone(plan);
+    nextPlan.stage = targetGroup.id;
+    targetGroup.plans.push(nextPlan);
+  });
+  merged.planGroups.sort((a, b) => (a.order || 999) - (b.order || 999));
+  return merged;
 }
 
 function pruneRuntimeByCatalog(runtime, catalog) {
@@ -262,6 +301,107 @@ function normalizeIncomingSnapshot(data) {
     legacyState: data,
   });
   return { ok: true, snapshot: migrated };
+}
+
+function buildRemoteMergePreviewStats(localCatalog, remoteCatalog) {
+  const localIds = collectPlanIds(localCatalog || { planGroups: [] });
+  const remoteIds = collectPlanIds(remoteCatalog || { planGroups: [] });
+  let remoteAdded = 0;
+  let remoteUpdated = 0;
+  let localOnlyKept = 0;
+
+  remoteIds.forEach((id) => {
+    if (localIds.has(id)) remoteUpdated++;
+    else remoteAdded++;
+  });
+  localIds.forEach((id) => {
+    if (!remoteIds.has(id)) localOnlyKept++;
+  });
+
+  return {
+    remoteTotal: remoteIds.size,
+    remoteAdded,
+    remoteUpdated,
+    localOnlyKept,
+  };
+}
+
+export async function previewRemoteCatalogMerge(sourceUrl = CATALOG_V7_FILE) {
+  const source = String(sourceUrl || CATALOG_V7_FILE).trim() || CATALOG_V7_FILE;
+  const reqUrl = source.includes('?') ? `${source}&_sync=${Date.now()}` : `${source}?_sync=${Date.now()}`;
+  let rawText = '';
+  let parsed;
+
+  try {
+    const resp = await fetch(reqUrl, { cache: 'no-store' });
+    if (!resp.ok) {
+      return { ok: false, msg: `拉取失败（HTTP ${resp.status}）` };
+    }
+    rawText = await resp.text();
+    parsed = JSON.parse(rawText);
+  } catch (_err) {
+    return { ok: false, msg: '拉取或解析远程数据失败，请检查地址与网络。' };
+  }
+
+  const defaults = createEmptyV7Snapshot();
+  const candidate = isPlainObject(parsed?.catalog) || parsed?.version === 7
+    ? parsed
+    : {
+      version: V7_VERSION,
+      catalog: parsed,
+      runtime: defaults.runtime,
+      settings: defaults.settings,
+    };
+  const validated = validateV7Snapshot(candidate);
+  if (!validated.ok) return { ok: false, msg: `远程数据不符合 v7：${validated.msg}` };
+
+  const remoteCatalog = validated.snapshot.catalog;
+  const mergedCatalog = mergeRemoteCatalogWithLocalExtras(remoteCatalog, state.catalog);
+  const stats = buildRemoteMergePreviewStats(state.catalog, remoteCatalog);
+  const remoteHash = await computeSha256(rawText);
+  const fetchedAt = new Date().toISOString();
+
+  return {
+    ok: true,
+    sourceUrl: source,
+    fetchedAt,
+    remoteHash,
+    remoteCatalog,
+    mergedCatalog,
+    ...stats,
+    summary: buildSyncSummary(stats),
+  };
+}
+
+export function applyRemoteCatalogMerge(preview) {
+  if (!preview?.ok || !preview?.mergedCatalog) {
+    return { ok: false, msg: '没有可应用的远程预览数据' };
+  }
+
+  const current = getCurrentSnapshot();
+  const next = deepClone(current);
+  next.catalog = deepClone(preview.mergedCatalog);
+  next.runtime = pruneRuntimeByCatalog(current.runtime, next.catalog);
+  if (!next.settings) next.settings = {};
+  if (!next.settings.syncMeta || typeof next.settings.syncMeta !== 'object') {
+    next.settings.syncMeta = {};
+  }
+  next.settings.syncMeta.lastSyncAt = String(preview.fetchedAt || new Date().toISOString());
+  next.settings.syncMeta.lastSource = String(preview.sourceUrl || CATALOG_V7_FILE);
+  next.settings.syncMeta.lastRemoteHash = String(preview.remoteHash || '');
+  next.settings.syncMeta.lastSummary = buildSyncSummary({
+    remoteAdded: Number(preview.remoteAdded) || 0,
+    remoteUpdated: Number(preview.remoteUpdated) || 0,
+    localOnlyKept: Number(preview.localOnlyKept) || 0,
+  });
+
+  applySnapshotToState(next);
+  saveToStorage();
+  return {
+    ok: true,
+    ...buildRemoteMergePreviewStats(current.catalog, preview.remoteCatalog || { planGroups: [] }),
+    summary: next.settings.syncMeta.lastSummary,
+  };
 }
 
 export async function loadState() {

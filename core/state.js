@@ -20,6 +20,12 @@ export const state = {
       deepseekApiKey: '',
       deepseekModel: 'deepseek-v4-flash',
     },
+    syncMeta: {
+      lastSyncAt: '',
+      lastSource: '',
+      lastRemoteHash: '',
+      lastSummary: '',
+    },
   },
 
   // 兼容层（只保留派生数据）

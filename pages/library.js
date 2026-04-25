@@ -5,9 +5,8 @@ import { flattenPlans, getModuleExercises, pruneRuntimeByPlans, showToast } from
 import { mountLibrarySorters } from '../services/drag-sort.js';
 
 const libraryGroupOpen = {};
-let libraryManageMode = false;
+let activeGroupSettingsId = null;
 
-const GROUP_EMOJI_CANDIDATES = ['一', '二', '三', '休', '🧩', '🎯', '⚡', '🔥', '🌙', '🌿', '🛡️', '🌀'];
 const PLAN_EMOJI_CANDIDATES = ['🏋️', '🧗', '🧘', '🤸', '⚡', '💪', '🎯', '🔥', '🌙', '🏃', '🛡️', '🧩'];
 const GROUP_PALETTES = [
   { color: '#34C759', gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)' },
@@ -15,7 +14,9 @@ const GROUP_PALETTES = [
   { color: '#FF9500', gradient: 'linear-gradient(135deg, #FF9500 0%, #FF6B35 100%)' },
   { color: '#5856D6', gradient: 'linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)' },
   { color: '#FF2D55', gradient: 'linear-gradient(135deg, #FF2D55 0%, #FF375F 100%)' },
+  { color: '#00C7BE', gradient: 'linear-gradient(135deg, #00C7BE 0%, #64D2FF 100%)' },
 ];
+const ART_ACCENTS = ['#ffffff', '#E6F0FF', '#EAFBF8', '#FFEBDC', '#F1E6FF', '#E6FFF3'];
 
 function escapeHtml(text = '') {
   return String(text)
@@ -148,79 +149,60 @@ function buildPlanEmojiPicker(planId, selectedEmoji) {
   }</div>`;
 }
 
-function buildGroupEmojiPicker(groupId, selectedEmoji) {
-  const token = encodeToken(groupId);
-  return `<div class="emoji-picker-row">${
-    GROUP_EMOJI_CANDIDATES.map((emoji) => {
-      const active = emoji === selectedEmoji ? ' active' : '';
-      return `<button class="emoji-chip${active}" type="button" data-group-emoji="${token}|${encodeToken(emoji)}">${escapeHtml(emoji)}</button>`;
-    }).join('')
-  }</div>`;
-}
-
-function buildModernArtDataUrl(group) {
+function buildModernArtDataUrl() {
   const palette = randomPick(GROUP_PALETTES);
   const c1 = palette.color;
-  const c2 = randomPick(['#0A84FF', '#AF52DE', '#30D158', '#FF9F0A', '#5AC8FA']);
-  const bubble1 = randomInt(18, 40);
-  const bubble2 = randomInt(10, 28);
-  const bubble3 = randomInt(8, 20);
-  const rot = randomInt(-20, 22);
+  const c2 = randomPick(['#0A84FF', '#AF52DE', '#30D158', '#FF9F0A', '#5AC8FA', '#00C7BE']);
+  const c3 = randomPick(['#EAF3FF', '#F3ECFF', '#EAFBF8', '#FFF2E8']);
+  const accent = randomPick(ART_ACCENTS);
+  const template = randomInt(1, 5);
+
+  let overlay = '';
+  if (template === 1) {
+    overlay = `
+      <path d="M-18 126C28 88 74 74 132 90C188 106 226 78 276 54V276H-18Z" fill="${accent}" fill-opacity="0.34"/>
+      <path d="M14 214C62 164 142 172 196 204C226 222 248 238 276 264V276H14Z" fill="${accent}" fill-opacity="0.28"/>
+      <circle cx="${randomInt(168, 224)}" cy="${randomInt(42, 88)}" r="${randomInt(20, 38)}" fill="#ffffff" fill-opacity="0.26"/>`;
+  } else if (template === 2) {
+    overlay = `
+      <g transform="rotate(${randomInt(-18, 18)} 128 128)">
+        <rect x="${randomInt(14, 36)}" y="${randomInt(26, 44)}" width="${randomInt(180, 214)}" height="${randomInt(26, 38)}" rx="16" fill="${accent}" fill-opacity="0.24"/>
+        <rect x="${randomInt(8, 26)}" y="${randomInt(84, 108)}" width="${randomInt(190, 228)}" height="${randomInt(28, 46)}" rx="20" fill="${accent}" fill-opacity="0.22"/>
+        <rect x="${randomInt(22, 42)}" y="${randomInt(154, 178)}" width="${randomInt(164, 206)}" height="${randomInt(32, 44)}" rx="18" fill="${accent}" fill-opacity="0.2"/>
+      </g>`;
+  } else if (template === 3) {
+    overlay = `
+      <polygon points="${randomInt(20, 76)},${randomInt(16, 58)} ${randomInt(130, 188)},${randomInt(36, 88)} ${randomInt(92, 152)},${randomInt(152, 214)} ${randomInt(16, 50)},${randomInt(120, 190)}" fill="${accent}" fill-opacity="0.26"/>
+      <polygon points="${randomInt(160, 236)},${randomInt(96, 146)} ${randomInt(230, 256)},${randomInt(144, 184)} ${randomInt(178, 238)},${randomInt(238, 270)} ${randomInt(126, 174)},${randomInt(194, 246)}" fill="#ffffff" fill-opacity="0.2"/>`;
+  } else if (template === 4) {
+    overlay = `
+      <circle cx="128" cy="128" r="${randomInt(72, 94)}" fill="${accent}" fill-opacity="0.2"/>
+      <circle cx="128" cy="128" r="${randomInt(46, 64)}" fill="#ffffff" fill-opacity="0.18"/>
+      <circle cx="${randomInt(64, 188)}" cy="${randomInt(60, 196)}" r="${randomInt(18, 30)}" fill="#ffffff" fill-opacity="0.3"/>`;
+  } else {
+    overlay = `
+      <path d="M-10 90C36 66 86 54 132 64C184 76 226 54 266 30V150C226 176 180 198 122 188C74 178 32 186 -10 214Z" fill="${accent}" fill-opacity="0.24"/>
+      <path d="M-10 170C36 146 82 132 132 140C180 148 226 130 266 108V278H-10Z" fill="#ffffff" fill-opacity="0.2"/>
+      <circle cx="${randomInt(42, 90)}" cy="${randomInt(36, 84)}" r="${randomInt(14, 22)}" fill="#ffffff" fill-opacity="0.35"/>`;
+  }
 
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="bg" x1="${randomInt(0, 30)}%" y1="${randomInt(0, 30)}%" x2="${randomInt(70, 100)}%" y2="${randomInt(70, 100)}%">
       <stop offset="0%" stop-color="${c1}" />
-      <stop offset="100%" stop-color="${c2}" />
-    </linearGradient>
-    <linearGradient id="shape" x1="20%" y1="10%" x2="80%" y2="90%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.72" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="55%" stop-color="${c2}" />
+      <stop offset="100%" stop-color="${c3}" />
     </linearGradient>
     <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" />
+      <feGaussianBlur stdDeviation="${randomInt(3, 8)}" />
     </filter>
   </defs>
-  <rect width="256" height="256" rx="60" fill="url(#bg)" />
-  <circle cx="${randomInt(50, 84)}" cy="${randomInt(46, 90)}" r="${bubble1}" fill="#fff" fill-opacity="0.2" filter="url(#blur)" />
-  <circle cx="${randomInt(160, 210)}" cy="${randomInt(44, 104)}" r="${bubble2}" fill="#fff" fill-opacity="0.3" />
-  <circle cx="${randomInt(164, 222)}" cy="${randomInt(150, 206)}" r="${bubble3}" fill="#fff" fill-opacity="0.24" />
-  <g transform="rotate(${rot} 128 128)">
-    <rect x="${randomInt(54, 86)}" y="${randomInt(116, 146)}" width="${randomInt(98, 132)}" height="${randomInt(42, 64)}" rx="${randomInt(18, 28)}" fill="url(#shape)" />
-  </g>
-  <text x="128" y="136" text-anchor="middle" dominant-baseline="middle" font-family="-apple-system, Segoe UI, sans-serif" font-size="64" font-weight="800" fill="#fff" fill-opacity="0.9">${escapeHtml(group?.coverEmoji || group?.badge || '◆')}</text>
+  <rect width="256" height="256" rx="62" fill="url(#bg)" />
+  ${overlay}
+  <circle cx="${randomInt(34, 222)}" cy="${randomInt(24, 232)}" r="${randomInt(8, 16)}" fill="#ffffff" fill-opacity="0.22" filter="url(#blur)" />
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
-async function fileToCompressedImageDataUrl(file) {
-  const readAsDataURL = (blob) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('读取文件失败'));
-    reader.readAsDataURL(blob);
-  });
-
-  const original = await readAsDataURL(file);
-  const img = new Image();
-  const loaded = new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = () => reject(new Error('无法解析图片'));
-  });
-  img.src = original;
-  await loaded;
-
-  const maxSide = 256;
-  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-  const w = Math.max(48, Math.round(img.width * scale));
-  const h = Math.max(48, Math.round(img.height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL('image/webp', 0.86);
 }
 
 function renderGroupBadge(groupMeta, safeGradient, fallbackText, safeGroupName) {
@@ -228,31 +210,19 @@ function renderGroupBadge(groupMeta, safeGradient, fallbackText, safeGroupName) 
   if (cover) {
     return `<div class="stage-badge stage-badge-image" style="background:${safeGradient}"><img src="${escapeHtml(cover)}" alt="${safeGroupName || 'group'}"></div>`;
   }
-  const text = escapeHtml(groupMeta.coverEmoji || fallbackText || '🧩');
+  const text = escapeHtml(fallbackText || '组');
   return `<div class="stage-badge" style="background:${safeGradient}">${text}</div>`;
 }
 
 function renderGroupManagePanel(groupMeta, encodedGroupId) {
   const safeName = escapeHtml(groupMeta.name || '');
-  const safeSubtitle = escapeHtml(groupMeta.subtitle || '');
   return `<div class="group-manage-panel">
-    <div class="group-manage-grid">
-      <label class="manage-label">计划组名称
-        <input class="manage-input" data-group-name-input="${encodedGroupId}" value="${safeName}" />
-      </label>
-      <label class="manage-label">副标题
-        <input class="manage-input" data-group-subtitle-input="${encodedGroupId}" value="${safeSubtitle}" />
-      </label>
-    </div>
-    <div class="manage-subtitle">图例 Emoji</div>
-    ${buildGroupEmojiPicker(groupMeta.id, groupMeta.coverEmoji || groupMeta.badge || '🧩')}
+    <label class="manage-label">计划组名称
+      <input class="manage-input" data-group-name-input="${encodedGroupId}" value="${safeName}" />
+    </label>
+    <div class="manage-subtitle">长按分组标题或计划卡可拖拽排序</div>
     <div class="group-manage-actions">
-      <label class="manage-upload-btn">
-        上传图例
-        <input type="file" accept="image/*" data-group-upload="${encodedGroupId}" />
-      </label>
       <button class="manage-btn" type="button" data-group-random-art="${encodedGroupId}">随机矢量图</button>
-      <button class="manage-btn" type="button" data-group-clear-art="${encodedGroupId}">改回 Emoji</button>
       <button class="manage-btn" type="button" data-add-plan="${encodedGroupId}">+ 增加计划</button>
       <button class="manage-btn danger" type="button" data-delete-group="${encodedGroupId}">删除分组</button>
     </div>
@@ -268,44 +238,40 @@ function renderPlanManagePanel(plan, encodedPlanId) {
     <div class="manage-subtitle">计划 Emoji</div>
     ${buildPlanEmojiPicker(plan.id, plan.icon || '🏋️')}
     <div class="plan-manage-actions">
-      <button class="manage-btn" type="button" data-open-plan="${encodedPlanId}">进入计划</button>
       <button class="manage-btn danger" type="button" data-delete-plan="${encodedPlanId}">删除计划</button>
     </div>
   </div>`;
 }
 
 function renderStageGroup(groupMeta, plans, isOpen) {
-  const badgeText = escapeHtml(groupMeta.badge || groupMeta.subtitle || groupMeta.name || '');
-  const safeGroupId = escapeHtml(groupMeta.id || '');
+  const badgeText = escapeHtml(groupMeta.badge || groupMeta.name || '');
   const encodedGroupId = encodeToken(groupMeta.id || '');
   const safeGroupName = escapeHtml(groupMeta.name || '');
-  const safeGroupSubtitle = escapeHtml(groupMeta.subtitle || '');
   const safeGroupColor = escapeHtml(groupMeta.color || '#8E8E93');
   const safeGroupGradient = escapeHtml(groupMeta.gradient || safeGroupColor);
-  const previewIcons = plans.slice(0, 3).map(plan => `<span class="stage-preview-icon">${escapeHtml(plan.icon || '•')}</span>`).join('');
   const badgeHtml = renderGroupBadge(groupMeta, safeGroupGradient, badgeText, safeGroupName);
+  const settingsOpen = activeGroupSettingsId === groupMeta.id;
 
-  let html = `<div class="stage-section${isOpen ? ' open' : ''}">`;
-  html += `<button class="stage-header" data-toggle-stage="${safeGroupId}" type="button">`;
+  let html = `<div class="stage-section${isOpen ? ' open' : ''}" data-group-id="${encodedGroupId}">`;
+  html += '<div class="stage-header">';
+  html += `<button class="stage-toggle-btn" data-toggle-stage="${encodedGroupId}" type="button">`;
   html += '<div class="stage-header-main">';
   html += `${badgeHtml}`;
-  html += `<div><div class="stage-title">${safeGroupName}</div><div class="stage-subtitle">${safeGroupSubtitle}</div></div>`;
+  html += `<div><div class="stage-title">${safeGroupName}</div></div>`;
   html += '</div>';
-  html += '<div class="stage-header-side">';
-  if (libraryManageMode) {
-    html += '<span class="drag-handle drag-handle-group" title="拖拽排序">⋮⋮</span>';
-  }
-  html += `<div class="stage-mini-icons">${previewIcons}</div>`;
-  html += `<div class="stage-count">${plans.length} 套计划</div>`;
   html += '<div class="stage-arrow">›</div>';
-  html += '</div></button>';
-  if (libraryManageMode) {
+  html += '</button>';
+  html += `<button class="group-settings-btn${settingsOpen ? ' active' : ''}" type="button" data-toggle-group-settings="${encodedGroupId}">${settingsOpen ? '收起' : '设置'}</button>`;
+  html += '</div>';
+
+  if (settingsOpen) {
     html += renderGroupManagePanel(groupMeta, encodedGroupId);
   }
+
   html += `<div class="stage-body"><div class="plan-cards" data-group-plans-list="${encodedGroupId}">`;
 
-  if (!plans.length && libraryManageMode) {
-    html += '<div class="library-empty-tip">当前分组暂无计划，点击上方“+ 增加计划”即可创建。</div>';
+  if (!plans.length) {
+    html += '<div class="library-empty-tip">当前分组暂无计划，点击“增加计划”即可创建。</div>';
   }
 
   plans.forEach((plan) => {
@@ -317,18 +283,14 @@ function renderStageGroup(groupMeta, plans, isOpen) {
     const exCount = modules.reduce((sum, _m, mi) =>
       sum + getModuleExercises(plan.id, mi, state.plans, {}).length
     , 0);
-    const planCardAttr = libraryManageMode ? '' : ` data-plan-id="${safePlanId}"`;
-    html += `<div class="plan-card${libraryManageMode ? ' manage' : ''}"${planCardAttr}>`;
+    html += `<div class="plan-card${settingsOpen ? ' manage' : ''}" data-plan-id="${safePlanId}">`;
+    html += '<div class="plan-card-main">';
     html += `<div class="plan-card-icon" style="background:${safeGroupColor}20">${safePlanIcon}</div>`;
     html += `<div class="plan-card-info"><div class="plan-card-name">${safePlanName}</div>`;
     html += `<div class="plan-card-desc">${modules.length} 个模块 · ${exCount} 个动作</div></div>`;
-    if (libraryManageMode) {
-      html += '<button class="drag-handle drag-handle-plan" type="button" title="拖拽排序">⋮⋮</button>';
-      html += '<div class="plan-card-arrow">⚙️</div>';
-    } else {
-      html += '<div class="plan-card-arrow">›</div>';
-    }
-    if (libraryManageMode) {
+    html += '<div class="plan-card-arrow">›</div>';
+    html += '</div>';
+    if (settingsOpen) {
       html += renderPlanManagePanel(plan, encodedPlanId);
     }
     html += '</div>';
@@ -338,19 +300,19 @@ function renderStageGroup(groupMeta, plans, isOpen) {
   return html;
 }
 
-export function isLibraryManageMode() {
-  return libraryManageMode;
-}
-
-export function toggleLibraryManageMode() {
-  libraryManageMode = !libraryManageMode;
-  renderLibrary();
-  showToast(libraryManageMode ? '🧩 已开启结构编辑模式' : '✅ 已退出结构编辑模式');
-}
-
-export function toggleLibraryStage(stageId) {
+export function toggleLibraryStage(groupToken) {
+  const stageId = decodeToken(groupToken);
   const current = ensureGroupOpen(stageId, false);
   libraryGroupOpen[stageId] = !current;
+  renderLibrary();
+}
+
+export function togglePlanGroupSettings(groupId) {
+  const id = decodeToken(groupId);
+  activeGroupSettingsId = activeGroupSettingsId === id ? null : id;
+  if (activeGroupSettingsId) {
+    ensureGroupOpen(activeGroupSettingsId, true);
+  }
   renderLibrary();
 }
 
@@ -362,22 +324,24 @@ export function addPlanGroup() {
   state.catalog.planGroups.push({
     id,
     name: `新计划组 ${state.catalog.planGroups.length + 1}`,
-    subtitle: '可编辑分组',
+    subtitle: '',
     badge: '新',
-    coverEmoji: '🧩',
-    coverImage: '',
+    coverEmoji: '',
+    coverImage: buildModernArtDataUrl(),
     color: palette.color,
     gradient: palette.gradient,
     order: state.catalog.planGroups.length + 1,
     plans: [],
   });
+  activeGroupSettingsId = id;
   ensureGroupOpen(id, true);
   syncCatalogState({ toast: '➕ 已新增计划组' });
 }
 
 export function removePlanGroup(groupId) {
+  const id = decodeToken(groupId);
   const groups = state.catalog?.planGroups || [];
-  const idx = groups.findIndex(g => g.id === groupId);
+  const idx = groups.findIndex(g => g.id === id);
   if (idx < 0) return;
   const group = groups[idx];
   const planCount = Array.isArray(group.plans) ? group.plans.length : 0;
@@ -387,58 +351,27 @@ export function removePlanGroup(groupId) {
   if (state.currentPlanId && !flattenPlans(state.catalog).some(p => p.id === state.currentPlanId)) {
     state.currentPlanId = null;
   }
+  if (activeGroupSettingsId === id) activeGroupSettingsId = null;
   syncCatalogState({ toast: '🗑 已删除计划组' });
 }
 
-export function updatePlanGroupText(groupId, field, value) {
-  const group = getGroupById(groupId);
+export function updatePlanGroupName(groupId, value) {
+  const group = getGroupById(decodeToken(groupId));
   if (!group) return;
   const v = String(value || '').trim();
-  if (field === 'name') {
-    group.name = v || group.name || '未命名分组';
-  } else if (field === 'subtitle') {
-    group.subtitle = v;
-  }
-  syncCatalogState();
-}
-
-export function setPlanGroupEmoji(groupId, emoji) {
-  const group = getGroupById(groupId);
-  if (!group) return;
-  group.coverEmoji = String(emoji || '').trim() || group.coverEmoji || '🧩';
-  group.coverImage = '';
+  group.name = v || group.name || '未命名分组';
   syncCatalogState();
 }
 
 export function setPlanGroupRandomArt(groupId) {
-  const group = getGroupById(groupId);
+  const group = getGroupById(decodeToken(groupId));
   if (!group) return;
-  group.coverImage = buildModernArtDataUrl(group);
-  syncCatalogState({ toast: '🎨 已生成矢量图图例' });
-}
-
-export function clearPlanGroupCoverArt(groupId) {
-  const group = getGroupById(groupId);
-  if (!group) return;
-  group.coverImage = '';
-  syncCatalogState({ toast: '🧼 已恢复 Emoji 图例' });
-}
-
-export async function setPlanGroupCoverImageFromFile(groupId, file) {
-  if (!file) return;
-  const group = getGroupById(groupId);
-  if (!group) return;
-  try {
-    const dataUrl = await fileToCompressedImageDataUrl(file);
-    group.coverImage = dataUrl;
-    syncCatalogState({ toast: '🖼️ 分组图例已更新' });
-  } catch (err) {
-    showToast(`❌ 上传失败：${err.message}`);
-  }
+  group.coverImage = buildModernArtDataUrl();
+  syncCatalogState({ toast: '🎨 已生成新的矢量图' });
 }
 
 export function addPlanToGroup(groupId) {
-  const group = getGroupById(groupId);
+  const group = getGroupById(decodeToken(groupId));
   if (!group) return;
   if (!Array.isArray(group.plans)) group.plans = [];
   const planId = ensureUniquePlanId(`${group.id}_plan_${group.plans.length + 1}`);
@@ -463,16 +396,16 @@ export function addPlanToGroup(groupId) {
 }
 
 export function removePlanById(planId) {
-  const loc = findPlanLocation(planId);
+  const loc = findPlanLocation(decodeToken(planId));
   if (!loc) return;
   if (!confirm(`确定删除计划「${loc.plan.name}」吗？`)) return;
   loc.group.plans.splice(loc.planIdx, 1);
-  if (state.currentPlanId === planId) state.currentPlanId = null;
+  if (state.currentPlanId === loc.plan.id) state.currentPlanId = null;
   syncCatalogState({ toast: '🗑 已删除计划' });
 }
 
 export function updatePlanName(planId, nextName) {
-  const loc = findPlanLocation(planId);
+  const loc = findPlanLocation(decodeToken(planId));
   if (!loc) return;
   const v = String(nextName || '').trim();
   loc.plan.name = v || loc.plan.name || '未命名计划';
@@ -480,7 +413,7 @@ export function updatePlanName(planId, nextName) {
 }
 
 export function setPlanEmoji(planId, emoji) {
-  const loc = findPlanLocation(planId);
+  const loc = findPlanLocation(decodeToken(planId));
   if (!loc) return;
   loc.plan.icon = String(emoji || '').trim() || loc.plan.icon || '🏋️';
   syncCatalogState();
@@ -493,27 +426,26 @@ export function renderLibrary() {
   if (planCountEl) planCountEl.textContent = state.plans.length;
 
   const groups = getSortedGroups();
-  let html = `<div class="library-tools">
-    <button class="library-tool-btn" type="button" data-toggle-library-manage>${libraryManageMode ? '✅ 完成结构编辑' : '🧩 编辑计划结构'}</button>
-    <button class="library-tool-btn" type="button" data-add-group>+ 新建计划组</button>
-  </div>`;
-
+  let html = '';
   if (!groups.length) {
-    html += '<div class="library-empty-tip">当前没有计划组，点击上方“新建计划组”开始搭建你的训练结构。</div>';
+    html += '<div class="library-empty-tip">当前没有计划组，点击底部按钮创建第一个计划组。</div>';
   }
 
   html += '<div id="libraryGroupList">';
   groups.forEach((group) => {
     const plans = Array.isArray(group.plans) ? group.plans : [];
-    if (!plans.length && !libraryManageMode) return;
     const isOpen = ensureGroupOpen(group.id, (group.order || 999) === 1);
     html += renderStageGroup(group, plans, isOpen);
   });
   html += '</div>';
+  html += `<div class="library-bottom-add-wrap">
+    <button class="library-add-fab" type="button" data-add-group aria-label="新建计划组">＋</button>
+    <div class="library-add-label">新建计划组</div>
+  </div>`;
 
   container.innerHTML = html;
   mountLibrarySorters({
-    enabled: libraryManageMode,
+    enabled: Boolean(activeGroupSettingsId),
     onReorderGroups: (from, to) => reorderGroupsByIndex(from, to),
     onReorderPlans: (fromGroupToken, toGroupToken, fromIdx, toIdx) => {
       reorderPlansBetweenGroups(

@@ -259,6 +259,16 @@ function normalizeAiConfig(rawAi) {
   };
 }
 
+function normalizeSyncMeta(rawSyncMeta) {
+  const meta = asObject(rawSyncMeta);
+  return {
+    lastSyncAt: cleanText(meta.lastSyncAt),
+    lastSource: cleanText(meta.lastSource),
+    lastRemoteHash: cleanText(meta.lastRemoteHash),
+    lastSummary: cleanText(meta.lastSummary),
+  };
+}
+
 function normalizeRuntime(rawRuntime) {
   const runtime = asObject(rawRuntime);
   return {
@@ -276,6 +286,7 @@ function normalizeSettings(rawSettings) {
   const settings = asObject(rawSettings);
   return {
     aiConfig: normalizeAiConfig(settings.aiConfig),
+    syncMeta: normalizeSyncMeta(settings.syncMeta),
   };
 }
 
@@ -312,6 +323,12 @@ export function createEmptyV7Snapshot() {
       aiConfig: {
         deepseekApiKey: '',
         deepseekModel: DEFAULT_AI_MODEL,
+      },
+      syncMeta: {
+        lastSyncAt: '',
+        lastSource: '',
+        lastRemoteHash: '',
+        lastSummary: '',
       },
     },
   };
