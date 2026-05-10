@@ -27,20 +27,20 @@
 :root[theme="dark"],
 :root[data-theme="dark"] {
   --bg: #0D0D12;
-  --glass: rgba(30,30,40,0.72);
-  --glass-heavy: rgba(20,20,28,0.88);
-  --glass-border: rgba(80,80,100,0.35);
+  --glass: rgba(30,30,45,0.92);
+  --glass-heavy: rgba(22,22,32,0.98);
+  --glass-border: rgba(100,100,130,0.2);
   --text1: #F0F0F5;
-  --text2: #B0B0BD;
-  --text3: #6B6B7A;
+  --text2: #9898A8;
+  --text3: #585868;
   --primary: #0A84FF;
   --success: #30D158;
   --warning: #FF9F0A;
   --danger: #FF453A;
-  --shadow: 0 2px 16px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
-  --orb1-bg: radial-gradient(circle at 30% 30%, rgba(10,132,255,0.25), rgba(88,86,214,0.08));
-  --orb2-bg: radial-gradient(circle at 55% 45%, rgba(90,200,250,0.15), rgba(52,199,89,0.06));
+  --shadow: 0 2px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  --orb1-bg: radial-gradient(circle at 30% 30%, rgba(10,132,255,0.15), rgba(88,86,214,0.04));
+  --orb2-bg: radial-gradient(circle at 55% 45%, rgba(90,200,250,0.08), rgba(52,199,89,0.02));
 }
 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -1580,94 +1580,202 @@ body::after {
 /* ===== 深色模式额外覆盖 ===== */
 :root[theme="dark"],
 :root[data-theme="dark"] {
+  /* 卡片和面板 */
+  .card, .detail-card, .settings-card, .empty-state,
+  .group-manage-panel, .plan-manage-panel {
+    background: var(--glass-heavy) !important;
+    border-color: var(--glass-border) !important;
+  }
+
+  /* 训练模块 */
+  .training-module-head {
+    background: var(--glass-heavy);
+    border-color: var(--glass-border);
+  }
+  .training-module-body {
+    background: rgba(20,20,30,0.5);
+    border-color: var(--glass-border);
+  }
+  .training-module-inner {
+    background: rgba(15,15,25,0.4);
+  }
+
+  /* 动作卡片 */
+  .exercise {
+    background: var(--glass);
+    border-color: var(--glass-border);
+  }
+  .exercise.done {
+    background: rgba(48,209,88,0.08);
+  }
+
+  /* 按钮 */
+  .set-btn {
+    background: var(--glass);
+    border-color: var(--glass-border);
+    color: var(--text1);
+  }
+  .set-btn.next {
+    background: rgba(10,132,255,0.15);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .set-btn.done {
+    background: rgba(48,209,88,0.12);
+    border-color: rgba(48,209,88,0.3);
+    color: var(--success);
+  }
+
+  /* 详情面板 */
+  .ex-detail {
+    background: rgba(20,20,30,0.6);
+    border-color: var(--glass-border);
+  }
+
+  /* 休息预设 */
+  .rest-presets button {
+    background: var(--glass);
+    border-color: var(--glass-border);
+    color: var(--text2);
+  }
+  .rest-presets button.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
   /* 日历小圆点 */
-  .cal-day.has-log.stage1::after { background: #34C759; }
-  .cal-day.has-log.stage2::after { background: #FF9500; }
-  .cal-day.has-log.restday::after { background: #AF52DE; }
+  .cal-day.has-log.stage1::after { background: #30D158; }
+  .cal-day.has-log.stage2::after { background: #FF9F0A; }
+  .cal-day.has-log.restday::after { background: #BF5AF2; }
 
   /* 浮动计时胶囊 */
   .timer-pill {
-    background: rgba(10,132,255,0.92);
+    background: rgba(10,132,255,0.95);
+    border-color: rgba(80,80,100,0.3);
   }
-  .timer-pill .tp-actions button {
-    background: rgba(255,255,255,0.2);
-  }
-  .tp-cancel { background: rgba(255,69,58,0.6) !important; }
+  .tp-cancel { background: rgba(255,69,58,0.7) !important; }
 
   /* 计时面板 */
-  .timer-overlay {
-    background: rgba(0,0,0,0.7);
-  }
+  .timer-overlay { background: rgba(0,0,0,0.8); }
   .timer-panel {
-    background: rgba(30,30,40,0.95);
-    border-color: rgba(80,80,100,0.4);
+    background: rgba(22,22,35,0.98);
+    border-color: var(--glass-border);
   }
 
   /* 表单输入 */
   input, select, textarea {
-    background: rgba(30,30,40,0.8) !important;
-    border-color: rgba(80,80,100,0.4) !important;
+    background: rgba(20,20,32,0.95) !important;
+    border-color: rgba(80,80,100,0.35) !important;
     color: var(--text1) !important;
   }
   input::placeholder, textarea::placeholder {
     color: var(--text3) !important;
   }
 
-  /* 闪光覆盖层在深色模式下更明显 */
-  .flash-overlay {
-    background: rgba(255,255,255,0.9);
-  }
+  /* 闪光覆盖层 */
+  .flash-overlay { background: rgba(255,255,255,0.85); }
 
   /* 详情页编辑模式 */
   .detail-ex-item.editing .detail-ex-editor {
-    background: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.25);
     border-color: rgba(80,80,100,0.4);
   }
-
-  /* 详情编辑器内联输入 */
   .detail-ex-edit-tip {
-    background: rgba(0,0,0,0.15) !important;
+    background: rgba(0,0,0,0.2) !important;
     color: var(--text1) !important;
   }
 
   /* 计划管理面板 */
-  .group-manage-panel,
-  .plan-manage-panel {
-    background: rgba(0,0,0,0.15);
-    border-color: rgba(80,80,100,0.3);
+  .group-manage-panel, .plan-manage-panel {
+    background: rgba(20,20,30,0.6) !important;
+    border-color: var(--glass-border) !important;
   }
 
-  /* 标签文本框 */
+  /* 添加动作表单 */
   .add-ex-form input,
   .add-ex-form select,
   .add-ex-form textarea {
-    background: rgba(30,30,40,0.9) !important;
-    border-color: rgba(80,80,100,0.5) !important;
+    background: rgba(20,20,32,0.95) !important;
+    border-color: rgba(80,80,100,0.4) !important;
     color: var(--text1) !important;
   }
 
   /* 要点预览 */
   .tip-preview-text {
     background: rgba(0,0,0,0.2);
-    border-color: rgba(80,80,100,0.3);
+    border-color: rgba(80,80,100,0.25);
     color: var(--text2);
   }
 
   /* 导入面板 */
   #importText {
-    background: rgba(30,30,40,0.9) !important;
+    background: rgba(20,20,32,0.95) !important;
     color: var(--text1) !important;
   }
 
   /* 要点编辑器 */
   .tip-editor-input {
-    background: rgba(30,30,40,0.95) !important;
+    background: rgba(20,20,32,0.98) !important;
     color: var(--text1) !important;
   }
   .tip-editor-links-wrap {
-    background: rgba(0,0,0,0.2);
-    border-color: rgba(80,80,100,0.3);
+    background: rgba(0,0,0,0.15);
+    border-color: rgba(80,80,100,0.25);
   }
+
+  /* 底部导航 */
+  .bottom-nav {
+    background: rgba(15,15,22,0.95) !important;
+    border-top-color: var(--glass-border) !important;
+  }
+  .nav-item {
+    color: var(--text3) !important;
+  }
+  .nav-item.active {
+    color: var(--primary) !important;
+  }
+
+  /* 页面头部 */
+  .page-header {
+    background: var(--glass) !important;
+    border-bottom-color: var(--glass-border) !important;
+  }
+
+  /* 标签页 */
+  .tab-bar, .seg-control {
+    background: var(--glass) !important;
+    border-color: var(--glass-border) !important;
+  }
+  .seg-btn {
+    color: var(--text2) !important;
+  }
+  .seg-btn.active {
+    background: var(--primary) !important;
+    color: #fff !important;
+  }
+
+  /* 列表项 */
+  .plan-item {
+    background: var(--glass);
+    border-color: var(--glass-border);
+  }
+
+  /* 下拉面板 */
+  .dropup-panel {
+    background: var(--glass-heavy);
+    border-color: var(--glass-border);
+  }
+
+  /* 警告提示 */
+  .warn-notice {
+    background: rgba(255,159,10,0.12);
+    border-color: rgba(255,159,10,0.3);
+    color: var(--warning);
+  }
+
+  /* 移动端滚动条 */
+  ::-webkit-scrollbar { background: rgba(30,30,45,0.5); }
+  ::-webkit-scrollbar-thumb { background: rgba(80,80,100,0.5); }
 }
 
 /* ===== 主题切换按钮 ===== */
