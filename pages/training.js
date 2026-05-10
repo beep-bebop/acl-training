@@ -242,11 +242,17 @@ export function renderTraining() {
   plan.modules.forEach((mod, mi) => {
     const moduleExercises = getModuleExercises(state.currentPlanId, mi, state.plans, {});
     const inner = container.querySelector(`[data-module-inner="${mi}"]`);
-    if (!inner) return;
+    if (!inner) {
+      console.error('[renderTraining] 无法找到 inner 元素，mi=', mi);
+      return;
+    }
 
     moduleExercises.forEach((_ex, ei) => {
       const actualEx = getExercise(state.currentPlanId, mi, ei, state.plans, {});
-      if (!actualEx) return;
+      if (!actualEx) {
+        console.error('[renderTraining] 无法获取动作，mi=', mi, 'ei=', ei);
+        return;
+      }
       const done = isExerciseDone(state.currentPlanId, mi, ei, state.plans, {}, state.runtime.progress);
       const totalSets = getSetCount(actualEx);
       const key = exKey(state.currentPlanId, mi, ei, state.plans, {});
@@ -286,7 +292,7 @@ export function renderTraining() {
       let timerHtml = '';
       if (isTimed) {
         const secs = getDuration(actualEx);
-        const timerKey = `${planId}|${mi}|${ei}`;
+        const timerKey = `${plan.id}|${mi}|${ei}`;
         const isRunning = runningTimerKey === timerKey;
         timerHtml = `<div class="inline-timer-action">`;
         timerHtml += `<button class="start-timer-btn${isRunning ? ' running' : ''}" data-start-timer="${encodedPlanId}|${mi}|${ei}|${secs}|${totalSets}" data-timer-key="${timerKey}" data-secs="${secs}">`;
