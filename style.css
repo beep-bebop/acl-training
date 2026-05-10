@@ -1600,13 +1600,20 @@ body::after {
   }
 
   /* 训练模块 */
-  .training-module-head {
+  .training-module {
     background: var(--glass-heavy) !important;
     border-color: var(--glass-border) !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+  .training-module-head {
+    background: transparent !important;
+  }
+  .training-module-head:active {
+    background: rgba(255,255,255,0.03) !important;
   }
   .training-module-body {
-    background: var(--glass) !important;
-    border-color: var(--glass-border) !important;
+    background: transparent !important;
+    border-top: 1px solid var(--glass-border) !important;
   }
   .training-module-inner {
     background: transparent;
@@ -1624,30 +1631,32 @@ body::after {
 
   /* 按钮 */
   .set-btn {
-    background: rgba(35,35,50,0.8) !important;
-    border-color: rgba(80,80,100,0.25) !important;
+    background: rgba(40,40,55,0.7) !important;
+    border-color: rgba(100,100,130,0.2) !important;
     color: var(--text2) !important;
+    box-shadow: none !important;
   }
   .set-btn.next {
-    background: rgba(10,132,255,0.12) !important;
-    border-color: rgba(10,132,255,0.4) !important;
+    background: rgba(10,132,255,0.08) !important;
+    border-color: rgba(10,132,255,0.25) !important;
     color: var(--primary) !important;
   }
   .set-btn.done {
-    background: rgba(48,209,88,0.1) !important;
-    border-color: rgba(48,209,88,0.25) !important;
+    background: rgba(48,209,88,0.08) !important;
+    border-color: rgba(48,209,88,0.2) !important;
     color: var(--success) !important;
   }
 
   /* 计时按钮 */
   .start-timer-btn {
-    background: rgba(35,35,50,0.8) !important;
-    border-color: rgba(10,132,255,0.3) !important;
+    background: rgba(40,40,55,0.7) !important;
+    border-color: rgba(10,132,255,0.2) !important;
     color: var(--primary) !important;
+    box-shadow: none !important;
   }
   .start-timer-btn.running {
-    background: rgba(255,159,10,0.12) !important;
-    border-color: rgba(255,159,10,0.4) !important;
+    background: rgba(255,159,10,0.08) !important;
+    border-color: rgba(255,159,10,0.25) !important;
     color: var(--warning) !important;
   }
 
