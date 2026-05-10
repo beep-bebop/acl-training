@@ -20,21 +20,41 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 56px;
   --device-width: 460px;
+  --orb1-bg: radial-gradient(circle at 30% 30%, rgba(0,122,255,0.34), rgba(88,86,214,0.06));
+  --orb2-bg: radial-gradient(circle at 55% 45%, rgba(90,200,250,0.24), rgba(52,199,89,0.08));
+}
+
+:root[theme="dark"],
+:root[data-theme="dark"] {
+  --bg: #0D0D12;
+  --glass: rgba(30,30,40,0.72);
+  --glass-heavy: rgba(20,20,28,0.88);
+  --glass-border: rgba(80,80,100,0.35);
+  --text1: #F0F0F5;
+  --text2: #B0B0BD;
+  --text3: #6B6B7A;
+  --primary: #0A84FF;
+  --success: #30D158;
+  --warning: #FF9F0A;
+  --danger: #FF453A;
+  --shadow: 0 2px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --orb1-bg: radial-gradient(circle at 30% 30%, rgba(10,132,255,0.25), rgba(88,86,214,0.08));
+  --orb2-bg: radial-gradient(circle at 55% 45%, rgba(90,200,250,0.15), rgba(52,199,89,0.06));
 }
 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-  background:
-    radial-gradient(120% 80% at 8% -10%, rgba(255,255,255,0.92), rgba(255,255,255,0) 58%),
-    linear-gradient(150deg, #dfe9ff 0%, #eff4ff 36%, #f7f9ff 100%);
+  background: var(--bg);
   color: var(--text1);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   position: relative;
   isolation: isolate;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 body::before,
@@ -51,14 +71,21 @@ body::before {
   height: 220px;
   top: -60px;
   right: -40px;
-  background: radial-gradient(circle at 30% 30%, rgba(0,122,255,0.34), rgba(88,86,214,0.06));
+  background: var(--orb1-bg);
 }
 body::after {
   width: 260px;
   height: 260px;
   left: -90px;
   bottom: 40px;
-  background: radial-gradient(circle at 55% 45%, rgba(90,200,250,0.24), rgba(52,199,89,0.08));
+  background: var(--orb2-bg);
+}
+
+:root[theme="dark"] body::before {
+  background: var(--orb1-bg);
+}
+:root[theme="dark"] body::after {
+  background: var(--orb2-bg);
 }
 
 /* ===== 顶部导航栏 ===== */
@@ -1549,3 +1576,128 @@ body::after {
   transition: all 0.3s ease;
 }
 .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+
+/* ===== 深色模式额外覆盖 ===== */
+:root[theme="dark"],
+:root[data-theme="dark"] {
+  /* 日历小圆点 */
+  .cal-day.has-log.stage1::after { background: #34C759; }
+  .cal-day.has-log.stage2::after { background: #FF9500; }
+  .cal-day.has-log.restday::after { background: #AF52DE; }
+
+  /* 浮动计时胶囊 */
+  .timer-pill {
+    background: rgba(10,132,255,0.92);
+  }
+  .timer-pill .tp-actions button {
+    background: rgba(255,255,255,0.2);
+  }
+  .tp-cancel { background: rgba(255,69,58,0.6) !important; }
+
+  /* 计时面板 */
+  .timer-overlay {
+    background: rgba(0,0,0,0.7);
+  }
+  .timer-panel {
+    background: rgba(30,30,40,0.95);
+    border-color: rgba(80,80,100,0.4);
+  }
+
+  /* 表单输入 */
+  input, select, textarea {
+    background: rgba(30,30,40,0.8) !important;
+    border-color: rgba(80,80,100,0.4) !important;
+    color: var(--text1) !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--text3) !important;
+  }
+
+  /* 闪光覆盖层在深色模式下更明显 */
+  .flash-overlay {
+    background: rgba(255,255,255,0.9);
+  }
+
+  /* 详情页编辑模式 */
+  .detail-ex-item.editing .detail-ex-editor {
+    background: rgba(0,0,0,0.2);
+    border-color: rgba(80,80,100,0.4);
+  }
+
+  /* 详情编辑器内联输入 */
+  .detail-ex-edit-tip {
+    background: rgba(0,0,0,0.15) !important;
+    color: var(--text1) !important;
+  }
+
+  /* 计划管理面板 */
+  .group-manage-panel,
+  .plan-manage-panel {
+    background: rgba(0,0,0,0.15);
+    border-color: rgba(80,80,100,0.3);
+  }
+
+  /* 标签文本框 */
+  .add-ex-form input,
+  .add-ex-form select,
+  .add-ex-form textarea {
+    background: rgba(30,30,40,0.9) !important;
+    border-color: rgba(80,80,100,0.5) !important;
+    color: var(--text1) !important;
+  }
+
+  /* 要点预览 */
+  .tip-preview-text {
+    background: rgba(0,0,0,0.2);
+    border-color: rgba(80,80,100,0.3);
+    color: var(--text2);
+  }
+
+  /* 导入面板 */
+  #importText {
+    background: rgba(30,30,40,0.9) !important;
+    color: var(--text1) !important;
+  }
+
+  /* 要点编辑器 */
+  .tip-editor-input {
+    background: rgba(30,30,40,0.95) !important;
+    color: var(--text1) !important;
+  }
+  .tip-editor-links-wrap {
+    background: rgba(0,0,0,0.2);
+    border-color: rgba(80,80,100,0.3);
+  }
+}
+
+/* ===== 主题切换按钮 ===== */
+#themeToggle {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--primary);
+  background: rgba(0,122,255,0.08);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-width: 60px;
+}
+#themeToggle:active {
+  transform: scale(0.95);
+}
+#themeToggle.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+:root[theme="dark"] #themeToggle,
+:root[data-theme="dark"] #themeToggle {
+  background: rgba(10,132,255,0.15);
+  color: var(--primary);
+}
+:root[theme="dark"] #themeToggle.active,
+:root[data-theme="dark"] #themeToggle.active {
+  background: var(--primary);
+  color: #fff;
+}

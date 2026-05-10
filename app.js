@@ -22,7 +22,8 @@ import {
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
-  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs, previewRemoteSync, applyRemoteSync
+  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs, previewRemoteSync, applyRemoteSync,
+  initTheme, toggleTheme
 } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import {
@@ -384,6 +385,10 @@ function setupEventDelegation() {
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
+    if (e.target.closest('[data-theme-toggle]')) {
+      const newTheme = toggleTheme();
+      showToast(newTheme === 'dark' ? '🌙 深色模式已开启' : '☀️ 浅色模式已开启');
+    }
   });
 
   // 导入对话框
@@ -416,6 +421,7 @@ async function init() {
   await loadState();
   hydrateAiConfigInputs();
   setupEventDelegation();
+  initTheme();
   navigateTo('pageLibrary');
   renderLibrary();
 }

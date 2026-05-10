@@ -207,3 +207,45 @@ export function clearAiApiKey() {
   hydrateAiConfigInputs();
   showToast('🔐 已清空 API Key');
 }
+
+export function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'dark') {
+    root.setAttribute('data-theme', 'dark');
+  } else {
+    root.removeAttribute('data-theme');
+  }
+}
+
+export function getCurrentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+
+export function toggleTheme() {
+  const current = getCurrentTheme();
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  if (!state.settings) state.settings = {};
+  state.settings.theme = next;
+  saveToStorage();
+  updateThemeButton(next);
+  return next;
+}
+
+export function updateThemeButton(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.textContent = theme === 'dark' ? '开' : '关';
+  btn.classList.toggle('active', theme === 'dark');
+}
+
+export function initTheme() {
+  const savedTheme = state.settings?.theme;
+  if (savedTheme) {
+    applyTheme(savedTheme);
+    updateThemeButton(savedTheme);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    applyTheme('dark');
+    updateThemeButton('dark');
+  }
+}
