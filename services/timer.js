@@ -5,12 +5,18 @@ import { showToast, alertFinish } from '../utils/helpers.js';
 let timerInterval = null;
 let timerRemaining = 0;
 let timerPaused = false;
+let onTimerDoneCallback = null;
 
-export function showTimerPill(doneSet, secs) {
+export function setOnTimerDone(callback) {
+  onTimerDoneCallback = callback;
+}
+
+export function showTimerPill(doneSet, secs, onDone = null) {
   const pill = document.getElementById('timerPill');
-  document.getElementById('tpLabel').textContent = doneSet !== undefined ? `第 ${doneSet} 组完成 · 休息中` : '组间休息';
+  document.getElementById('tpLabel').textContent = doneSet !== undefined ? `第 ${doneSet} 组完成 · 计时中` : '组间休息';
   timerRemaining = secs;
   timerPaused = false;
+  if (onDone) onTimerDoneCallback = onDone;
   updateTimerUI();
   pill.classList.add('show');
   const pauseBtn = document.getElementById('tpPauseBtn');
@@ -24,7 +30,12 @@ export function showTimerPill(doneSet, secs) {
       clearInterval(timerInterval); timerInterval = null;
       pill.classList.remove('show');
       alertFinish();
-      showToast('⏰ 休息结束，开始下一组！');
+      showToast('⏰ 计时结束！');
+      if (onTimerDoneCallback) {
+        const cb = onTimerDoneCallback;
+        onTimerDoneCallback = null;
+        cb();
+      }
     }
   }, 1000);
 }

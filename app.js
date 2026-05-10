@@ -16,9 +16,9 @@ import {
 } from './pages/detail.js';
 import {
   startTraining, renderTraining, toggleSet, setExerciseRest, stopTrainingDurationTicker,
-  openTrainingTipEditor, handleTrainingTipEditorInput, closeTrainingTipEditor, saveTrainingTipEditor
+  openTrainingTipEditor, handleTrainingTipEditorInput, closeTrainingTipEditor, saveTrainingTipEditor,
+  startTimedExercise
 } from './pages/training.js';
-import { toggleInlineTimer } from './components/inline-timer.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
@@ -338,10 +338,12 @@ function setupEventDelegation() {
       return;
     }
 
-    // 内联计时器
-    const timerEl = e.target.closest('[data-inline-timer]');
-    if (timerEl) {
-      toggleInlineTimer(timerEl);
+    // 计时动作开始按钮
+    const startTimerBtn = e.target.closest('[data-start-timer]');
+    if (startTimerBtn) {
+      const [planIdRaw, mi, ei, secs, totalSets] = startTimerBtn.dataset.startTimer.split('|');
+      const planId = decodeURIComponent(planIdRaw || '');
+      startTimedExercise(planId, parseInt(mi), parseInt(ei), parseInt(secs), parseInt(totalSets));
       return;
     }
 

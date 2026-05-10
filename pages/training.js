@@ -10,11 +10,12 @@ import {
   getPlanProgress, isModuleActive, isModuleDone, getPlanGroupByPlanId,
   showToast
 } from '../utils/helpers.js';
-import { showTimerPill } from '../services/timer.js';
+import { showTimerPill, cancelTimer } from '../services/timer.js';
 import { logCalendar } from '../services/calendar.js';
 
 let trainingDurationTicker = null;
 let tipEditorContext = null;
+let runningTimerKey = null;
 
 function escapeHtml(value = '') {
   return String(value)
@@ -281,13 +282,16 @@ export function renderTraining() {
         setHtml = `<div class="ex-sets-row"><button class="set-btn${done ? ' done' : ' next'}" data-toggle-set="${encodedPlanId}|${mi}|${ei}|0">${done ? '✓ 已完成' : '点击完成'}</button></div>`;
       }
 
-      // 计时
+      // 计时动作 - 显示大按钮开始计时
       let timerHtml = '';
       if (isTimed) {
         const secs = getDuration(actualEx);
-        timerHtml = `<div class="inline-timer">`;
-        timerHtml += `<div class="it-circle" data-inline-timer data-state="idle" data-secs="${secs}">${secs}</div>`;
-        timerHtml += '<span class="it-label">点击计时</span></div>';
+        const timerKey = `${planId}|${mi}|${ei}`;
+        const isRunning = runningTimerKey === timerKey;
+        timerHtml = `<div class="inline-timer-action">`;
+        timerHtml += `<button class="start-timer-btn${isRunning ? ' running' : ''}" data-start-timer="${encodedPlanId}|${mi}|${ei}|${secs}|${totalSets}" data-timer-key="${timerKey}" data-secs="${secs}">`;
+        timerHtml += `${isRunning ? '⏱ 计时中...' : '▶ 开始计时 ' + secs + '秒'}`;
+        timerHtml += `</button></div>`;
       }
 
       // 休息预设
@@ -366,4 +370,40 @@ export function saveExerciseTip(planId, mi, ei, tipText, silent = false) {
 
   saveToStorage();
   if (!silent) showToast('📝 执行要点已保存');
+}
+
+export function startTimedExercise(planId, mi, ei, secs, totalSets) {
+  const timerKey = `${planId}|${mi}|${ei}`;
+  if (runningTimerKey === timerKey) {
+    cancelTimer();
+    runningTimerKey = null;
+    renderTraining();
+    return;
+  }
+  runningTimerKey = timerKey;
+  showTimerPill(0, secs, () => {
+    const ex = getExercise(planId, mi, ei, state.plans, {});
+    if (!ex) return;
+    let doneCount = 0;
+    for (let s = 0; s < totalSets; s++) {
+      if (isSetDone(planId, mi, ei, s, state.runtime.progress, state.plans, {})) doneCount++;
+    }
+    if (doneCount < totalSets) {
+      for (let s = 0; s < totalSets; s++) {
+        if (!isSetDone(planId, mi, ei, s, state.runtime.progress, state.plans, {})) {
+          state.runtime.progress[`${exKey(planId, mi, ei, state.plans, {})}_s${s}`] = true;
+          doneCount++;
+          break;
+        }
+      }
+    }
+    if (doneCount >= totalSets) {
+      showToast('✅ 所有组完成！');
+      logCalendar(planId, ex.name, ex.id, false);
+    }
+    runningTimerKey = null;
+    saveToStorage();
+    renderTraining();
+  });
+  renderTraining();
 }
