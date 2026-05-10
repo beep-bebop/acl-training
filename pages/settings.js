@@ -222,30 +222,89 @@ export function getCurrentTheme() {
 }
 
 export function toggleTheme() {
-  const current = getCurrentTheme();
-  const next = current === 'dark' ? 'light' : 'dark';
-  applyTheme(next);
+  const current = state.settings?.theme || 'auto';
+  const modes = ['auto', 'dark', 'light'];
+  const currentIndex = modes.indexOf(current);
+  const nextIndex = (currentIndex + 1) % modes.length;
+  const next = modes[nextIndex];
+  
   if (!state.settings) state.settings = {};
   state.settings.theme = next;
   saveToStorage();
-  updateThemeButton(next);
+  
+  if (next === 'auto') {
+    applyAutoTheme();
+    updateThemeButton(getEffectiveTheme());
+  } else {
+    applyTheme(next);
+    updateThemeButton(next);
+  }
   return next;
 }
 
 export function updateThemeButton(theme) {
   const btn = document.getElementById('themeToggle');
   if (!btn) return;
-  btn.textContent = theme === 'dark' ? '开' : '关';
-  btn.classList.toggle('active', theme === 'dark');
+  const labels = { auto: '自动', dark: '深色', light: '浅色', system: '系统' };
+  btn.textContent = labels[theme] || theme;
+  btn.classList.toggle('active', theme === 'dark' || theme === 'auto');
 }
 
 export function initTheme() {
-  const savedTheme = state.settings?.theme;
-  if (savedTheme) {
+  const savedTheme = state.settings?.theme || 'auto';
+  if (savedTheme !== 'auto') {
     applyTheme(savedTheme);
     updateThemeButton(savedTheme);
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    applyTheme('dark');
-    updateThemeButton('dark');
+  } else {
+    applyAutoTheme();
   }
+  setupSystemThemeListener();
+}
+
+function setupSystemThemeListener() {
+  if (!window.matchMedia) return;
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', (e) => {
+    const themeSetting = state.settings?.theme || 'auto';
+    if (themeSetting === 'auto' || themeSetting === 'system') {
+      applyAutoTheme();
+      updateThemeButton(getEffectiveTheme());
+    }
+  });
+}
+
+function applyAutoTheme() {
+  const themeSetting = state.settings?.theme || 'auto';
+  if (themeSetting === 'auto' || themeSetting === 'system') {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      applyTheme('dark');
+    } else {
+      applyTheme('light');
+    }
+  } else if (themeSetting === 'time') {
+    applyTimeBasedTheme();
+  }
+}
+
+function applyTimeBasedTheme() {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 18) {
+    applyTheme('light');
+  } else {
+    applyTheme('dark');
+  }
+}
+
+function getEffectiveTheme() {
+  const themeSetting = state.settings?.theme || 'auto';
+  if (themeSetting === 'auto' || themeSetting === 'system') {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  } else if (themeSetting === 'time') {
+    const hour = new Date().getHours();
+    return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+  }
+  return themeSetting;
 }

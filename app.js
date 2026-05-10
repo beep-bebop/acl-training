@@ -387,7 +387,12 @@ function setupEventDelegation() {
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
     if (e.target.closest('[data-theme-toggle]')) {
       const newTheme = toggleTheme();
-      showToast(newTheme === 'dark' ? '🌙 深色模式已开启' : '☀️ 浅色模式已开启');
+      const messages = {
+        auto: '🔄 跟随系统主题',
+        dark: '🌙 深色模式已开启',
+        light: '☀️ 浅色模式已开启'
+      };
+      showToast(messages[newTheme] || '主题已切换');
     }
   });
 
