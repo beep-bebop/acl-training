@@ -1894,3 +1894,44 @@ body::after {
   background: var(--primary);
   color: #fff;
 }
+
+/* ===== 深色模式强制覆盖 ===== */
+[data-theme="dark"] .plan-card,
+[theme="dark"] .plan-card {
+  background: #1a1a25 !important;
+  border-color: rgba(100,100,130,0.25) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+[data-theme="dark"] .plan-card-name,
+[theme="dark"] .plan-card-name {
+  color: #f0f0f5 !important;
+}
+[data-theme="dark"] .plan-card-desc,
+[theme="dark"] .plan-card-desc {
+  color: #a8a8b3 !important;
+}
+[data-theme="dark"] .stage-section,
+[theme="dark"] .stage-section {
+  background: rgba(30,30,45,0.95) !important;
+  border-color: rgba(100,100,130,0.2) !important;
+}
+[data-theme="dark"] .stage-title,
+[theme="dark"] .stage-title {
+  color: #f0f0f5 !important;
+}
+[data-theme="dark"] .stage-header,
+[theme="dark"] .stage-header {
+  background: transparent !important;
+}
+[data-theme="dark"] .stage-header-main,
+[theme="dark"] .stage-header-main {
+  background: transparent !important;
+}
+[data-theme="dark"] .plan-card-icon,
+[theme="dark"] .plan-card-icon {
+  background: rgba(100,100,130,0.2) !important;
+}
+[data-theme="dark"] .plan-card-arrow,
+[theme="dark"] .plan-card-arrow {
+  color: #606070 !important;
+}
