@@ -46,11 +46,6 @@ export async function createUser(username, migrateLegacy = false) {
   const userId = generateUid();
   
   let catalog = { planGroups: [] };
-  const defaults = await loadDefaultCatalogSnapshot();
-  if (defaults?.catalog?.planGroups?.length > 0) {
-    catalog = defaults.catalog;
-  }
-  
   let runtime = {
     currentPlanId: null,
     progress: {},
@@ -65,9 +60,13 @@ export async function createUser(username, migrateLegacy = false) {
   if (migrateLegacy) {
     const legacyData = loadLegacyData();
     if (legacyData.catalog) catalog = legacyData.catalog;
-    if (legacyData.plans) plans = legacyData.plans;
     if (legacyData.runtime) runtime = { ...runtime, ...legacyData.runtime };
     if (legacyData.settings) settings = { ...settings, ...legacyData.settings };
+  } else {
+    const defaults = await loadDefaultCatalogSnapshot();
+    if (defaults?.catalog?.planGroups?.length > 0) {
+      catalog = defaults.catalog;
+    }
   }
   
   users[userId] = {

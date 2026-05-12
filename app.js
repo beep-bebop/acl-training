@@ -457,12 +457,16 @@ function setupEventDelegation() {
 
 // ===== 初始化 =====
 async function init() {
-  await ensureDefaultUser();
-  hydrateAiConfigInputs();
-  setupEventDelegation();
-  initTheme();
-  navigateTo('pageLibrary');
-  renderLibrary();
+  try {
+    await ensureDefaultUser();
+    hydrateAiConfigInputs();
+    setupEventDelegation();
+    initTheme();
+    navigateTo('pageLibrary');
+    renderLibrary();
+  } catch (e) {
+    console.error('初始化错误:', e);
+  }
 }
 
 // ===== 保存用户状态 =====
