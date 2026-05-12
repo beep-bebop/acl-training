@@ -2,10 +2,6 @@
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import {
-  getAllUsers, createUser, login, logout, ensureDefaultUser, saveCurrentUserState,
-  getCurrentUserId, getUserData, loadLegacyData, loadUserState
-} from './services/users.js';
-import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
   addPlanGroup, removePlanGroup, updatePlanGroupName,
   setPlanGroupRandomArt,
@@ -35,6 +31,7 @@ import {
   startRestWithDuration, closeTimerManual
 } from './services/timer.js';
 import { showToast } from './utils/helpers.js';
+import { saveToStorage } from './core/storage.js';
 
 // ===== 页面导航 =====
 function navigateTo(pageId) {
@@ -72,12 +69,12 @@ function navigateTo(pageId) {
       if (content) content.classList.remove('no-top-nav');
       navTitle.textContent = '训练中'; bottomBar.classList.add('hidden'); break;
     case 'pageCalendar':
-      navBack.classList.add('hidden'); navTitle.textContent = '训练日历';
+      navBack.classList.remove('hidden'); navTitle.textContent = '训练日历';
       if (topNav) topNav.classList.remove('nav-hidden');
       if (content) content.classList.remove('no-top-nav');
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden'); break;
     case 'pageSettings':
-      navBack.classList.add('hidden'); navTitle.textContent = '设置';
+      navBack.classList.remove('hidden'); navTitle.textContent = '设置';
       if (topNav) topNav.classList.remove('nav-hidden');
       if (content) content.classList.remove('no-top-nav');
       hydrateAiConfigInputs();
@@ -399,35 +396,6 @@ function setupEventDelegation() {
       };
       showToast(messages[newTheme] || '主题已切换');
     }
-    // 用户管理
-    if (e.target.closest('[data-create-user]')) {
-      const username = document.getElementById('newUsername').value.trim() || '新用户';
-      createUser(username).then(() => {
-        document.getElementById('newUsername').value = '';
-        showToast('👤 用户创建成功' + (username ? ' - ' + username : ''));
-      });
-    }
-    if (e.target.closest('[data-show-users]')) {
-      showUsersList();
-    }
-    if (e.target.closest('[data-login-user]')) {
-      const userId = e.target.closest('[data-login-user]').dataset.loginUser;
-      login(userId).then((success) => {
-        if (success) {
-          document.getElementById('usersList').style.display = 'none';
-          renderLibrary();
-          initTheme();
-        }
-      });
-    }
-    if (e.target.closest('[data-logout]')) {
-      logout().then(() => {
-        showUsersList();
-      });
-    }
-    if (e.target.closest('[data-migrate-data]')) {
-      migrateDataToUser();
-    }
   });
 
   // 导入对话框
@@ -457,68 +425,17 @@ function setupEventDelegation() {
 
 // ===== 初始化 =====
 async function init() {
-  try {
-    await ensureDefaultUser();
-    hydrateAiConfigInputs();
-    setupEventDelegation();
-    initTheme();
-    navigateTo('pageLibrary');
-    renderLibrary();
-  } catch (e) {
-    console.error('初始化错误:', e);
-  }
+  await loadState();
+  hydrateAiConfigInputs();
+  setupEventDelegation();
+  initTheme();
+  navigateTo('pageLibrary');
+  renderLibrary();
 }
 
-// ===== 保存用户状态 =====
+// ===== 保存状态 =====
 function onBeforeUnload() {
-  saveCurrentUserState();
-}
-
-function migrateDataToUser() {
-  const legacyData = loadLegacyData();
-  const userId = getCurrentUserId();
-  
-  if (userId && legacyData.catalog) {
-    const userData = {
-      catalog: legacyData.catalog,
-      runtime: legacyData.runtime || { progress: {}, exerciseRest: {} },
-      settings: legacyData.settings || {}
-    };
-    saveUserData(userId, userData);
-    loadUserState(userId).then(() => {
-      renderLibrary();
-    });
-    showToast('✅ 数据迁移完成');
-  } else {
-    showToast('⚠️ 没有找到旧数据');
-  }
-}
-
-function showUsersList() {
-  const users = getAllUsers();
-  const currentUserId = getCurrentUserId();
-  const usersListContent = document.getElementById('usersListContent');
-  
-  if (Object.keys(users).length === 0) {
-    usersListContent.innerHTML = '<p style="text-align:center;color:var(--text2);padding:16px;">暂无用户</p>';
-  } else {
-    let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
-    for (const [userId, user] of Object.entries(users)) {
-      const isCurrent = userId === currentUserId;
-      html += `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:${isCurrent ? 'var(--primary)' : 'var(--glass)'};color:${isCurrent ? 'white' : 'var(--text1)'};">
-          <span>${user.username} (${user.id.slice(-8)})</span>
-          <button data-login-user="${userId}" style="padding:6px 12px;border-radius:6px;background:rgba(255,255,255,0.2);border:none;color:inherit;font-size:14px;cursor:pointer;">
-            ${isCurrent ? '当前' : '切换'}
-          </button>
-        </div>
-      `;
-    }
-    html += '</div>';
-    usersListContent.innerHTML = html;
-  }
-  
-  document.getElementById('usersList').style.display = 'block';
+  saveToStorage();
 }
 
 window.addEventListener('beforeunload', onBeforeUnload);
