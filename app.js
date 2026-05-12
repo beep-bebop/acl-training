@@ -2,6 +2,10 @@
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import {
+  getAllUsers, createUser, login, logout, ensureDefaultUser, saveCurrentUserState,
+  getCurrentUserId, getUserData
+} from './services/users.js';
+import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
   addPlanGroup, removePlanGroup, updatePlanGroupName,
   setPlanGroupRandomArt,
@@ -384,6 +388,7 @@ function setupEventDelegation() {
     if (e.target.closest('[data-apply-remote-sync]')) applyRemoteSync();
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
+    if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
     if (e.target.closest('[data-theme-toggle]')) {
       const newTheme = toggleTheme();
@@ -393,6 +398,27 @@ function setupEventDelegation() {
         light: '☀️ 浅色模式已开启'
       };
       showToast(messages[newTheme] || '主题已切换');
+    }
+    // 用户管理
+    if (e.target.closest('[data-create-user]')) {
+      const username = document.getElementById('newUsername').value.trim() || '新用户';
+      createUser(username);
+      document.getElementById('newUsername').value = '';
+      showToast('👤 用户创建成功' + (username ? ' - ' + username : ''));
+    }
+    if (e.target.closest('[data-show-users]')) {
+      showUsersList();
+    }
+    if (e.target.closest('[data-login-user]')) {
+      const userId = e.target.closest('[data-login-user]').dataset.loginUser;
+      if (login(userId)) {
+        document.getElementById('usersList').style.display = 'none';
+        renderLibrary();
+      }
+    }
+    if (e.target.closest('[data-logout]')) {
+      logout();
+      showUsersList();
     }
   });
 
@@ -417,18 +443,46 @@ function setupEventDelegation() {
       startRestWithDuration(parseInt(e.target.closest('[data-rest-duration]').dataset.restDuration));
       return;
     }
-    if (e.target.closest('[data-timer-close]')) closeTimerManual();
-  });
-}
-
 // ===== 初始化 =====
 async function init() {
-  await loadState();
+  ensureDefaultUser();
   hydrateAiConfigInputs();
   setupEventDelegation();
   initTheme();
   navigateTo('pageLibrary');
-  renderLibrary();
 }
 
+// ===== 保存用户状态 =====
+function onBeforeUnload() {
+  saveCurrentUserState();
+}
+
+
 document.addEventListener('DOMContentLoaded', init);
+
+function showUsersList() {
+  const users = getAllUsers();
+  const currentUserId = getCurrentUserId();
+  const usersListContent = document.getElementById('usersListContent');
+  
+  if (Object.keys(users).length === 0) {
+    usersListContent.innerHTML = '<p style="text-align:center;color:var(--text2);padding:16px;">暂无用户</p>';
+  } else {
+    let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    for (const [userId, user] of Object.entries(users)) {
+      const isCurrent = userId === currentUserId;
+      html += `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:${isCurrent ? 'var(--primary)' : 'var(--glass)'};color:${isCurrent ? 'white' : 'var(--text1)'};">
+          <span>${user.username} (${user.id.slice(-8)})</span>
+          <button data-login-user="${userId}" style="padding:6px 12px;border-radius:6px;background:rgba(255,255,255,0.2);border:none;color:inherit;font-size:14px;">
+            ${isCurrent ? '当前' : '切换'}
+          </button>
+        </div>
+      `;
+    }
+    html += '</div>';
+    usersListContent.innerHTML = html;
+  }
+  
+  document.getElementById('usersList').style.display = 'block';
+}
