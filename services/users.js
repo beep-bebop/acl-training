@@ -1,6 +1,6 @@
 import { state } from '../core/state.js';
 import { showToast } from '../utils/helpers.js';
-import { loadStateFromJSON } from '../services/plans.js';
+import { loadDefaultCatalogSnapshot } from '../services/plans.js';
 
 export const USER_STORAGE_KEY = 'acl_users';
 export const CURRENT_USER_KEY = 'acl_current_user';
@@ -41,11 +41,13 @@ export function generateUid() {
   return 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-export function createUser(username, migrateLegacy = false) {
+export async function createUser(username, migrateLegacy = false) {
   const users = getAllUsers();
   const userId = generateUid();
   
-  let catalog = { version: 7, planGroups: [] };
+  const defaults = await loadDefaultCatalogSnapshot();
+  
+  let catalog = defaults.catalog;
   let plans = [];
   let runtime = {
     currentPlanId: null,
@@ -221,7 +223,7 @@ export function hasLegacyData() {
   return LEGACY_STORAGE_KEYS.some(key => localStorage.getItem(key));
 }
 
-export function ensureDefaultUser() {
+export async function ensureDefaultUser() {
   const userId = getCurrentUserId();
   if (userId && getUserData(userId)) {
     login(userId);
@@ -237,7 +239,7 @@ export function ensureDefaultUser() {
   }
   
   const migrateLegacy = hasLegacyData();
-  const newUserId = createUser('默认用户', migrateLegacy);
+  const newUserId = await createUser('默认用户', migrateLegacy);
   
   if (migrateLegacy) {
     showToast('🔄 已自动迁移旧数据');

@@ -3,7 +3,7 @@ import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import {
   getAllUsers, createUser, login, logout, ensureDefaultUser, saveCurrentUserState,
-  getCurrentUserId, getUserData, loadLegacyData
+  getCurrentUserId, getUserData, loadLegacyData, loadUserState
 } from './services/users.js';
 import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
@@ -402,9 +402,10 @@ function setupEventDelegation() {
     // 用户管理
     if (e.target.closest('[data-create-user]')) {
       const username = document.getElementById('newUsername').value.trim() || '新用户';
-      createUser(username);
-      document.getElementById('newUsername').value = '';
-      showToast('👤 用户创建成功' + (username ? ' - ' + username : ''));
+      createUser(username).then(() => {
+        document.getElementById('newUsername').value = '';
+        showToast('👤 用户创建成功' + (username ? ' - ' + username : ''));
+      });
     }
     if (e.target.closest('[data-show-users]')) {
       showUsersList();
@@ -453,7 +454,7 @@ function setupEventDelegation() {
 
 // ===== 初始化 =====
 async function init() {
-  ensureDefaultUser();
+  await ensureDefaultUser();
   hydrateAiConfigInputs();
   setupEventDelegation();
   initTheme();
