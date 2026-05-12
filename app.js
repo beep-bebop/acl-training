@@ -3,7 +3,7 @@ import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
 import {
   getAllUsers, createUser, login, logout, ensureDefaultUser, saveCurrentUserState,
-  getCurrentUserId, getUserData
+  getCurrentUserId, getUserData, loadLegacyData
 } from './services/users.js';
 import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
@@ -34,6 +34,7 @@ import {
   skipTimer, cancelTimer, pauseTimer,
   startRestWithDuration, closeTimerManual
 } from './services/timer.js';
+import { showToast } from './utils/helpers.js';
 
 // ===== 页面导航 =====
 function navigateTo(pageId) {
@@ -388,7 +389,6 @@ function setupEventDelegation() {
     if (e.target.closest('[data-apply-remote-sync]')) applyRemoteSync();
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
-    if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
     if (e.target.closest('[data-theme-toggle]')) {
       const newTheme = toggleTheme();
@@ -414,11 +414,15 @@ function setupEventDelegation() {
       if (login(userId)) {
         document.getElementById('usersList').style.display = 'none';
         renderLibrary();
+        initTheme();
       }
     }
     if (e.target.closest('[data-logout]')) {
       logout();
       showUsersList();
+    }
+    if (e.target.closest('[data-migrate-data]')) {
+      migrateDataToUser();
     }
   });
 
@@ -443,6 +447,10 @@ function setupEventDelegation() {
       startRestWithDuration(parseInt(e.target.closest('[data-rest-duration]').dataset.restDuration));
       return;
     }
+    if (e.target.closest('[data-timer-close]')) closeTimerManual();
+  });
+}
+
 // ===== 初始化 =====
 async function init() {
   ensureDefaultUser();
@@ -450,6 +458,7 @@ async function init() {
   setupEventDelegation();
   initTheme();
   navigateTo('pageLibrary');
+  renderLibrary();
 }
 
 // ===== 保存用户状态 =====
@@ -457,8 +466,25 @@ function onBeforeUnload() {
   saveCurrentUserState();
 }
 
-
-document.addEventListener('DOMContentLoaded', init);
+function migrateDataToUser() {
+  const legacyData = loadLegacyData();
+  const userId = getCurrentUserId();
+  
+  if (userId && legacyData.catalog) {
+    const userData = {
+      catalog: legacyData.catalog,
+      plans: legacyData.plans || [],
+      runtime: legacyData.runtime || { progress: {}, exerciseRest: {} },
+      settings: legacyData.settings || {}
+    };
+    saveUserData(userId, userData);
+    loadUserState(userId);
+    renderLibrary();
+    showToast('✅ 数据迁移完成');
+  } else {
+    showToast('⚠️ 没有找到旧数据');
+  }
+}
 
 function showUsersList() {
   const users = getAllUsers();
@@ -474,7 +500,7 @@ function showUsersList() {
       html += `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:${isCurrent ? 'var(--primary)' : 'var(--glass)'};color:${isCurrent ? 'white' : 'var(--text1)'};">
           <span>${user.username} (${user.id.slice(-8)})</span>
-          <button data-login-user="${userId}" style="padding:6px 12px;border-radius:6px;background:rgba(255,255,255,0.2);border:none;color:inherit;font-size:14px;">
+          <button data-login-user="${userId}" style="padding:6px 12px;border-radius:6px;background:rgba(255,255,255,0.2);border:none;color:inherit;font-size:14px;cursor:pointer;">
             ${isCurrent ? '当前' : '切换'}
           </button>
         </div>
@@ -486,3 +512,7 @@ function showUsersList() {
   
   document.getElementById('usersList').style.display = 'block';
 }
+
+window.addEventListener('beforeunload', onBeforeUnload);
+
+document.addEventListener('DOMContentLoaded', init);
