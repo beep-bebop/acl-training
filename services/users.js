@@ -45,10 +45,12 @@ export async function createUser(username, migrateLegacy = false) {
   const users = getAllUsers();
   const userId = generateUid();
   
+  let catalog = { planGroups: [] };
   const defaults = await loadDefaultCatalogSnapshot();
+  if (defaults?.catalog?.planGroups?.length > 0) {
+    catalog = defaults.catalog;
+  }
   
-  let catalog = defaults.catalog;
-  let plans = [];
   let runtime = {
     currentPlanId: null,
     progress: {},
@@ -74,7 +76,6 @@ export async function createUser(username, migrateLegacy = false) {
     createdAt: Date.now(),
     settings,
     catalog,
-    plans,
     runtime
   };
   
@@ -147,7 +148,14 @@ export function getUserData(userId) {
 export function saveUserData(userId, userData) {
   const users = getAllUsers();
   if (users[userId]) {
-    users[userId] = { ...users[userId], ...userData };
+    const existing = users[userId];
+    users[userId] = {
+      ...existing,
+      ...userData,
+      catalog: userData.catalog || existing.catalog,
+      runtime: { ...(existing.runtime || {}), ...(userData.runtime || {}) },
+      settings: { ...(existing.settings || {}), ...(userData.settings || {}) }
+    };
     saveUsers(users);
   }
 }
@@ -161,7 +169,7 @@ export function deleteUser(userId) {
   }
 }
 
-export function login(userId) {
+export async function login(userId) {
   const user = getUserData(userId);
   if (!user) {
     showToast('用户不存在');
@@ -169,12 +177,12 @@ export function login(userId) {
   }
   
   setCurrentUserId(userId);
-  loadUserState(userId);
+  await loadUserState(userId);
   showToast(`欢迎回来, ${user.username}`);
   return true;
 }
 
-export function logout() {
+export async function logout() {
   saveCurrentUserState();
   setCurrentUserId(null);
   state.user = null;
@@ -190,14 +198,36 @@ export function logout() {
   showToast('已退出登录');
 }
 
-export function loadUserState(userId) {
+export async function loadUserState(userId) {
   const user = getUserData(userId);
   if (!user) return;
   
   state.user = user;
   state.settings = user.settings || {};
-  state.catalog = user.catalog || { planGroups: [] };
-  state.plans = user.plans || [];
+  
+  if (user.catalog && user.catalog.planGroups && user.catalog.planGroups.length > 0) {
+    state.catalog = user.catalog;
+  } else {
+    const defaults = await loadDefaultCatalogSnapshot();
+    if (defaults?.catalog) {
+      state.catalog = defaults.catalog;
+    } else {
+      state.catalog = { planGroups: [] };
+    }
+  }
+  
+  state.plans = [];
+  if (state.catalog?.planGroups) {
+    state.catalog.planGroups.forEach(group => {
+      if (group.plans) {
+        group.plans.forEach(plan => {
+          plan.stage = plan.stage || group.id;
+          state.plans.push(plan);
+        });
+      }
+    });
+  }
+  
   state.runtime = user.runtime || {
     currentPlanId: null,
     progress: {},
@@ -213,7 +243,6 @@ export function saveCurrentUserState() {
   const userData = {
     settings: state.settings,
     catalog: state.catalog,
-    plans: state.plans,
     runtime: state.runtime
   };
   saveUserData(userId, userData);
@@ -225,8 +254,9 @@ export function hasLegacyData() {
 
 export async function ensureDefaultUser() {
   const userId = getCurrentUserId();
+  
   if (userId && getUserData(userId)) {
-    login(userId);
+    await login(userId);
     return userId;
   }
   
@@ -234,7 +264,7 @@ export async function ensureDefaultUser() {
   const userIds = Object.keys(users);
   
   if (userIds.length > 0) {
-    login(userIds[0]);
+    await login(userIds[0]);
     return userIds[0];
   }
   
@@ -245,6 +275,6 @@ export async function ensureDefaultUser() {
     showToast('🔄 已自动迁移旧数据');
   }
   
-  login(newUserId);
+  await login(newUserId);
   return newUserId;
 }

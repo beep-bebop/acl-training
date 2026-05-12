@@ -213,7 +213,6 @@ async function loadDefaultSnapshot() {
 
   let snapshot = null;
 
-  // 1) 优先读取 v7 canonical 文件
   try {
     const resp = await fetch(CATALOG_V7_FILE);
     if (resp.ok) {
@@ -227,7 +226,6 @@ async function loadDefaultSnapshot() {
     // fallback to legacy files
   }
 
-  // 2) 若 v7 文件暂无计划，回退到 legacy 默认计划自动升维
   if (!snapshot || !flattenPlansFromCatalog(snapshot.catalog).length) {
     const legacyPlans = await fetchLegacyDefaultPlans();
     const catalog = buildCatalogFromLegacyPlans(legacyPlans, STAGES);

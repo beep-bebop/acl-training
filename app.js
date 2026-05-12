@@ -412,15 +412,18 @@ function setupEventDelegation() {
     }
     if (e.target.closest('[data-login-user]')) {
       const userId = e.target.closest('[data-login-user]').dataset.loginUser;
-      if (login(userId)) {
-        document.getElementById('usersList').style.display = 'none';
-        renderLibrary();
-        initTheme();
-      }
+      login(userId).then((success) => {
+        if (success) {
+          document.getElementById('usersList').style.display = 'none';
+          renderLibrary();
+          initTheme();
+        }
+      });
     }
     if (e.target.closest('[data-logout]')) {
-      logout();
-      showUsersList();
+      logout().then(() => {
+        showUsersList();
+      });
     }
     if (e.target.closest('[data-migrate-data]')) {
       migrateDataToUser();
@@ -474,13 +477,13 @@ function migrateDataToUser() {
   if (userId && legacyData.catalog) {
     const userData = {
       catalog: legacyData.catalog,
-      plans: legacyData.plans || [],
       runtime: legacyData.runtime || { progress: {}, exerciseRest: {} },
       settings: legacyData.settings || {}
     };
     saveUserData(userId, userData);
-    loadUserState(userId);
-    renderLibrary();
+    loadUserState(userId).then(() => {
+      renderLibrary();
+    });
     showToast('✅ 数据迁移完成');
   } else {
     showToast('⚠️ 没有找到旧数据');
