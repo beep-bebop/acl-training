@@ -3,6 +3,7 @@ import { state } from '../core/state.js';
 import { showToast, alertFinish } from '../utils/helpers.js';
 
 let timerInterval = null;
+let timerTimeout = null;
 let timerEndTime = 0;
 let timerTotalDuration = 0;
 let timerPaused = false;
@@ -25,6 +26,22 @@ function initVisibilityHandler() {
   });
 }
 
+function finishTimer(pill, doneSet) {
+  if (hasNotified) return;
+  hasNotified = true;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
+  pill.classList.remove('show');
+  alertFinish();
+  showToast('⏰ 计时结束！');
+  sendNotification(doneSet !== undefined ? `第 ${doneSet} 组完成` : '组间休息结束', '⏰ 计时结束！');
+  if (onTimerDoneCallback) {
+    const cb = onTimerDoneCallback;
+    onTimerDoneCallback = null;
+    cb();
+  }
+}
+
 export function showTimerPill(doneSet, secs, onDone = null) {
   const pill = document.getElementById('timerPill');
   document.getElementById('tpLabel').textContent = doneSet !== undefined ? `第 ${doneSet} 组完成 · 计时中` : '组间休息';
@@ -42,6 +59,10 @@ export function showTimerPill(doneSet, secs, onDone = null) {
   initVisibilityHandler();
   
   if (timerInterval) clearInterval(timerInterval);
+  if (timerTimeout) clearTimeout(timerTimeout);
+  
+  timerTimeout = setTimeout(() => finishTimer(pill, doneSet), secs * 1000 + 100);
+  
   timerInterval = setInterval(() => {
     if (timerPaused) return;
     
@@ -49,17 +70,7 @@ export function showTimerPill(doneSet, secs, onDone = null) {
     updateTimerUI();
     
     if (remaining <= 0 && !hasNotified) {
-      hasNotified = true;
-      clearInterval(timerInterval); timerInterval = null;
-      pill.classList.remove('show');
-      alertFinish();
-      showToast('⏰ 计时结束！');
-      sendNotification(doneSet !== undefined ? `第 ${doneSet} 组完成` : '组间休息结束', '⏰ 计时结束！');
-      if (onTimerDoneCallback) {
-        const cb = onTimerDoneCallback;
-        onTimerDoneCallback = null;
-        cb();
-      }
+      finishTimer(pill, doneSet);
     }
   }, 250);
 }
@@ -72,13 +83,15 @@ function updateTimerUI() {
 }
 
 export function skipTimer() {
-  if (timerInterval) clearInterval(timerInterval); timerInterval = null;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
   document.getElementById('timerPill').classList.remove('show');
   showToast('⏭ 已跳过休息');
 }
 
 export function cancelTimer() {
-  if (timerInterval) clearInterval(timerInterval); timerInterval = null;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
   timerEndTime = 0;
   document.getElementById('timerPill').classList.remove('show');
 }
@@ -87,11 +100,19 @@ export function pauseTimer() {
   if (!timerPaused) {
     timerPaused = true;
     timerPausedTime = Date.now();
+    if (timerTimeout) { clearTimeout(timerTimeout); timerTimeout = null; }
   } else {
     timerPaused = false;
     const pausedDuration = Date.now() - timerPausedTime;
     timerEndTime += pausedDuration;
     timerPausedTime = 0;
+    const remaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
+    timerTimeout = setTimeout(() => {
+      const pill = document.getElementById('timerPill');
+      const doneSetMatch = document.getElementById('tpLabel').textContent.match(/第 (\d+) 组完成/);
+      const doneSet = doneSetMatch ? parseInt(doneSetMatch[1]) : undefined;
+      finishTimer(pill, doneSet);
+    }, remaining * 1000 + 100);
   }
   document.getElementById('tpPauseBtn').textContent = timerPaused ? '▶' : '⏸';
 }

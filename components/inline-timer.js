@@ -14,6 +14,17 @@ function sendInlineTimerNotification(title, body) {
   }
 }
 
+function finishInlineTimer(el, label) {
+  if (el._hasNotified) return;
+  el._hasNotified = true;
+  if (el._interval) { clearInterval(el._interval); el._interval = null; }
+  if (el._timeout) { clearTimeout(el._timeout); el._timeout = null; }
+  el.dataset.state = 'done'; el.classList.remove('running'); el.classList.add('done');
+  el.textContent = '✓'; if (label) label.textContent = '点击重置';
+  alertFinish(); showToast('⏰ 计时结束！');
+  sendInlineTimerNotification('动作计时结束', '⏰ 计时结束！');
+}
+
 export function toggleInlineTimer(el) {
   const timerState = el.dataset.state;
   const secs = parseInt(el.dataset.secs);
@@ -27,6 +38,8 @@ export function toggleInlineTimer(el) {
     el._endTime = endTime;
     el._hasNotified = false;
     
+    el._timeout = setTimeout(() => finishInlineTimer(el, label), secs * 1000 + 100);
+    
     const intv = setInterval(() => {
       if (el.dataset.state !== 'running') {
         clearInterval(intv);
@@ -36,16 +49,13 @@ export function toggleInlineTimer(el) {
       el.textContent = remaining;
       
       if (remaining <= 0 && !el._hasNotified) {
-        el._hasNotified = true;
-        clearInterval(intv); el.dataset.state = 'done'; el.classList.remove('running'); el.classList.add('done');
-        el.textContent = '✓'; if (label) label.textContent = '点击重置';
-        alertFinish(); showToast('⏰ 计时结束！');
-        sendInlineTimerNotification('动作计时结束', '⏰ 计时结束！');
+        finishInlineTimer(el, label);
       }
     }, 250);
     el._interval = intv;
   } else if (timerState === 'running') {
-    clearInterval(el._interval); el._interval = null;
+    if (el._interval) { clearInterval(el._interval); el._interval = null; }
+    if (el._timeout) { clearTimeout(el._timeout); el._timeout = null; }
     el.dataset.state = 'done'; el.classList.remove('running'); el.classList.add('done');
     el.textContent = '✓';
     const label = el.parentElement.querySelector('.it-label');

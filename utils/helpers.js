@@ -236,7 +236,7 @@ export function showToast(msg) {
 }
 
 export function alertFinish() {
-  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
   const flash = document.getElementById('flashOverlay');
   flash.classList.add('flash');
   setTimeout(() => flash.classList.remove('flash'), 300);
