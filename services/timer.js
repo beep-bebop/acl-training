@@ -1,47 +1,72 @@
-// 浮动计时胶囊
+// 浮动计时胶囊 - 使用时间戳确保后台也能准确计时
 import { state } from '../core/state.js';
 import { showToast, alertFinish } from '../utils/helpers.js';
 
 let timerInterval = null;
-let timerRemaining = 0;
+let timerEndTime = 0;
+let timerTotalDuration = 0;
 let timerPaused = false;
+let timerPausedTime = 0;
 let onTimerDoneCallback = null;
+let hasNotified = false;
 
 export function setOnTimerDone(callback) {
   onTimerDoneCallback = callback;
 }
 
+function initVisibilityHandler() {
+  if (window._timerVisibilityBound) return;
+  window._timerVisibilityBound = true;
+  
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && timerEndTime > 0 && !timerPaused) {
+      updateTimerUI();
+    }
+  });
+}
+
 export function showTimerPill(doneSet, secs, onDone = null) {
   const pill = document.getElementById('timerPill');
   document.getElementById('tpLabel').textContent = doneSet !== undefined ? `第 ${doneSet} 组完成 · 计时中` : '组间休息';
-  timerRemaining = secs;
+  timerTotalDuration = secs;
+  timerEndTime = Date.now() + (secs * 1000);
   timerPaused = false;
+  timerPausedTime = 0;
+  hasNotified = false;
   if (onDone) onTimerDoneCallback = onDone;
   updateTimerUI();
   pill.classList.add('show');
   const pauseBtn = document.getElementById('tpPauseBtn');
   if (pauseBtn) pauseBtn.textContent = '⏸';
+  
+  initVisibilityHandler();
+  
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     if (timerPaused) return;
-    timerRemaining--;
+    
+    const remaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
     updateTimerUI();
-    if (timerRemaining <= 0) {
+    
+    if (remaining <= 0 && !hasNotified) {
+      hasNotified = true;
       clearInterval(timerInterval); timerInterval = null;
       pill.classList.remove('show');
       alertFinish();
       showToast('⏰ 计时结束！');
+      sendNotification(doneSet !== undefined ? `第 ${doneSet} 组完成` : '组间休息结束', '⏰ 计时结束！');
       if (onTimerDoneCallback) {
         const cb = onTimerDoneCallback;
         onTimerDoneCallback = null;
         cb();
       }
     }
-  }, 1000);
+  }, 250);
 }
 
 function updateTimerUI() {
-  const mins = Math.floor(timerRemaining / 60), secs = timerRemaining % 60;
+  const remaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
+  const mins = Math.floor(remaining / 60), secs = remaining % 60;
   document.getElementById('tpCount').textContent =
     `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
@@ -54,12 +79,45 @@ export function skipTimer() {
 
 export function cancelTimer() {
   if (timerInterval) clearInterval(timerInterval); timerInterval = null;
+  timerEndTime = 0;
   document.getElementById('timerPill').classList.remove('show');
 }
 
 export function pauseTimer() {
-  timerPaused = !timerPaused;
+  if (!timerPaused) {
+    timerPaused = true;
+    timerPausedTime = Date.now();
+  } else {
+    timerPaused = false;
+    const pausedDuration = Date.now() - timerPausedTime;
+    timerEndTime += pausedDuration;
+    timerPausedTime = 0;
+  }
   document.getElementById('tpPauseBtn').textContent = timerPaused ? '▶' : '⏸';
+}
+
+function sendNotification(title, body) {
+  if (!('Notification' in window)) return;
+  
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: '/favicon.ico',
+      tag: 'timer-notification',
+      requireInteraction: true
+    });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: '/favicon.ico',
+          tag: 'timer-notification',
+          requireInteraction: true
+        });
+      }
+    });
+  }
 }
 
 export function startRestWithDuration(secs) {
@@ -68,9 +126,16 @@ export function startRestWithDuration(secs) {
 }
 
 export function openTimerManual() {
+  timerEndTime = 0;
   document.getElementById('timerOverlay').classList.add('show');
 }
 
 export function closeTimerManual() {
   document.getElementById('timerOverlay').classList.remove('show');
+}
+
+export function requestNotificationPermission() {
+  if (!('Notification' in window)) return Promise.resolve('unsupported');
+  if (Notification.permission !== 'default') return Promise.resolve(Notification.permission);
+  return Notification.requestPermission();
 }

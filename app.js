@@ -28,8 +28,51 @@ import {
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import {
   skipTimer, cancelTimer, pauseTimer,
-  startRestWithDuration, closeTimerManual
+  startRestWithDuration, closeTimerManual,
+  requestNotificationPermission
 } from './services/timer.js';
+
+// ===== 通知状态更新 =====
+function updateNotificationStatus() {
+  const statusEl = document.getElementById('notificationStatus');
+  const btnEl = document.getElementById('notificationPermissionBtn');
+  if (!statusEl || !btnEl) return;
+  
+  if (!('Notification' in window)) {
+    statusEl.textContent = '您的浏览器不支持消息通知';
+    btnEl.style.display = 'none';
+    return;
+  }
+  
+  switch (Notification.permission) {
+    case 'granted':
+      statusEl.textContent = '✅ 已开启通知权限';
+      btnEl.textContent = '🔔 通知已开启';
+      btnEl.disabled = true;
+      btnEl.style.opacity = '0.6';
+      break;
+    case 'denied':
+      statusEl.textContent = '❌ 通知权限已被拒绝，请在浏览器设置中开启';
+      btnEl.textContent = '🔔 重新请求权限';
+      btnEl.onclick = () => {
+        alert('请在浏览器设置中允许通知权限：设置 > 网站设置 > 通知');
+      };
+      break;
+    default:
+      statusEl.textContent = '⚠️ 尚未开启通知权限';
+      btnEl.textContent = '🔔 开启消息提醒';
+      btnEl.disabled = false;
+      btnEl.style.opacity = '1';
+      btnEl.onclick = null;
+      break;
+  }
+}
+
+function handleNotificationPermission() {
+  requestNotificationPermission().then(() => {
+    setTimeout(updateNotificationStatus, 500);
+  });
+}
 
 // ===== 页面导航 =====
 function navigateTo(pageId) {
@@ -76,6 +119,7 @@ function navigateTo(pageId) {
       if (topNav) topNav.classList.remove('nav-hidden');
       if (content) content.classList.remove('no-top-nav');
       hydrateAiConfigInputs();
+      updateNotificationStatus();
       navAction.classList.add('hidden'); bottomBar.classList.remove('hidden'); break;
   }
 
@@ -385,6 +429,7 @@ function setupEventDelegation() {
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
+    if (e.target.closest('[data-notification-permission]')) handleNotificationPermission();
     if (e.target.closest('[data-theme-toggle]')) {
       const newTheme = toggleTheme();
       const messages = {
