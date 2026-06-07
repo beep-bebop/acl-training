@@ -30,6 +30,36 @@ function extractPlansForPreview(data) {
   return flattenV7Plans(data);
 }
 
+export function summarizeImportSnapshot(data) {
+  const groups = Array.isArray(data?.catalog?.planGroups) ? data.catalog.planGroups : [];
+  if (!groups.length && Array.isArray(data?.plans)) {
+    return {
+      groups: 0,
+      plans: data.plans.length,
+      modules: data.plans.reduce((sum, plan) => sum + (Array.isArray(plan.modules) ? plan.modules.length : 0), 0),
+      exercises: data.plans.reduce((sum, plan) => (
+        sum + (Array.isArray(plan.modules) ? plan.modules.reduce((mSum, mod) => (
+          mSum + (Array.isArray(mod.exercises) ? mod.exercises.length : 0)
+        ), 0) : 0)
+      ), 0),
+    };
+  }
+
+  return groups.reduce((summary, group) => {
+    const plans = Array.isArray(group?.plans) ? group.plans : [];
+    summary.groups += 1;
+    summary.plans += plans.length;
+    plans.forEach((plan) => {
+      const modules = Array.isArray(plan?.modules) ? plan.modules : [];
+      summary.modules += modules.length;
+      modules.forEach((mod) => {
+        summary.exercises += Array.isArray(mod?.exercises) ? mod.exercises.length : 0;
+      });
+    });
+    return summary;
+  }, { groups: 0, plans: 0, modules: 0, exercises: 0 });
+}
+
 export function showImportDialog() {
   document.getElementById('importOverlay').classList.add('show');
   document.getElementById('importText').value = '';
@@ -57,9 +87,16 @@ export function previewImport() {
     const data = typeof text === 'string' ? JSON.parse(text) : text;
     const incomingPlans = extractPlansForPreview(data);
     if (!incomingPlans.length) throw new Error('格式错误，需要包含 plans 或 catalog.planGroups');
+    const summary = summarizeImportSnapshot(data);
 
-    let html = '<div style="margin-bottom:8px;font-weight:700;">📋 导入预览</div>';
-    html += `<div style="font-size:13px;color:var(--text2);">共 ${incomingPlans.length} 个计划 · 策略：${strategy}</div>`;
+    let html = '<div style="margin-bottom:8px;font-weight:700;">导入预览</div>';
+    html += `<div class="import-summary-grid">
+      <span>${summary.groups} 分组</span>
+      <span>${summary.plans} 计划</span>
+      <span>${summary.modules} 模块</span>
+      <span>${summary.exercises} 动作</span>
+    </div>`;
+    html += `<div style="font-size:13px;color:var(--text2);margin-top:8px;">策略：${escapeHtml(strategy)}</div>`;
     const simulatedIds = new Set(state.plans.map(p => p.id));
 
     incomingPlans.forEach(p => {
@@ -73,19 +110,19 @@ export function previewImport() {
         }
         simulatedIds.add(finalId);
         const renamed = finalId !== p.id;
-        html += `<div style="font-size:13px;padding:4px 0;${renamed ? 'color:var(--warning);' : ''}">➕ ${safePlanName} (${escapeHtml(finalId)})${renamed ? ' — 自动重命名' : ''}</div>`;
+        html += `<div style="font-size:13px;padding:4px 0;${renamed ? 'color:var(--warning);' : ''}">新增 ${safePlanName} (${escapeHtml(finalId)})${renamed ? ' · 自动重命名' : ''}</div>`;
         return;
       }
 
       const exists = simulatedIds.has(p.id);
       simulatedIds.add(p.id);
-      html += `<div style="font-size:13px;padding:4px 0;${exists ? 'color:var(--warning);' : ''}">${exists ? '🔄' : '➕'} ${safePlanName} (${safePlanId})${exists ? ' — 将覆盖' : ''}</div>`;
+      html += `<div style="font-size:13px;padding:4px 0;${exists ? 'color:var(--warning);' : ''}">${exists ? '覆盖' : '新增'} ${safePlanName} (${safePlanId})</div>`;
     });
 
     preview.innerHTML = html;
     confirmBtn.style.display = 'flex';
   } catch (e) {
-    preview.innerHTML = `<div style="color:var(--danger);">❌ 解析失败: ${escapeHtml(e.message)}</div>`;
+    preview.innerHTML = `<div style="color:var(--danger);">解析失败：${escapeHtml(e.message)}</div>`;
     confirmBtn.style.display = 'none';
   }
 }
@@ -95,10 +132,10 @@ export function confirmImport() {
   const strategy = document.getElementById('importStrategy').value;
   const result = importPlans(text, strategy);
   if (!result.ok) {
-    showToast('❌ ' + result.msg);
+    showToast('导入失败：' + result.msg);
     return;
   }
   closeImportDialog();
   renderLibrary();
-  showToast(`✅ 导入完成：${result.imported} 新增，${result.updated} 更新`);
+  showToast(`导入完成：${result.imported} 新增，${result.updated} 更新`);
 }

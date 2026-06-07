@@ -21,7 +21,7 @@ import {
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
-  saveAiConfig, clearAiApiKey, hydrateAiConfigInputs, previewRemoteSync, applyRemoteSync,
+  exportCurrentPlan, saveAiConfig, clearAiApiKey, hydrateAiConfigInputs, previewRemoteSync, applyRemoteSync,
   initTheme, toggleTheme
 } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
@@ -406,6 +406,7 @@ function setupEventDelegation() {
     if (e.target.closest('[data-reset-defaults]')) resetPlansToDefault();
     if (e.target.closest('[data-import]')) showImportDialog();
     if (e.target.closest('[data-export]')) exportPlans();
+    if (e.target.closest('[data-export-current]')) exportCurrentPlan();
     if (e.target.closest('[data-preview-remote-sync]')) previewRemoteSync();
     if (e.target.closest('[data-apply-remote-sync]')) applyRemoteSync();
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();

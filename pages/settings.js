@@ -27,6 +27,20 @@ function buildSnapshotForExport() {
   return snapshot;
 }
 
+function buildCurrentPlanSnapshotForExport() {
+  const snapshot = buildSnapshotForExport();
+  const currentPlanId = state.currentPlanId;
+  if (!currentPlanId) return null;
+  const nextGroups = [];
+  (snapshot.catalog?.planGroups || []).forEach((group) => {
+    const plans = (group.plans || []).filter(plan => plan.id === currentPlanId);
+    if (plans.length) nextGroups.push({ ...group, plans });
+  });
+  if (!nextGroups.length) return null;
+  snapshot.catalog = { ...snapshot.catalog, planGroups: nextGroups };
+  return snapshot;
+}
+
 function downloadSnapshotAsFile(snapshot, filenamePrefix = 'acl-plans') {
   const data = {
     ...snapshot,
@@ -112,7 +126,18 @@ export async function resetPlansToDefault() {
 export function exportPlans() {
   const snapshot = buildSnapshotForExport();
   downloadSnapshotAsFile(snapshot, 'acl-plans');
-  showToast('📤 已导出计划 JSON（已自动隐藏 API Key）');
+  showToast('已导出全部计划 JSON（已隐藏 API Key）');
+}
+
+export function exportCurrentPlan() {
+  const snapshot = buildCurrentPlanSnapshotForExport();
+  if (!snapshot) {
+    showToast('请先打开一个计划，再导出当前计划');
+    return;
+  }
+  const plan = snapshot.catalog.planGroups[0]?.plans?.[0];
+  downloadSnapshotAsFile(snapshot, `acl-plan-${plan?.id || 'current'}`);
+  showToast('已导出当前计划 JSON（已隐藏 API Key）');
 }
 
 export function copySchemaTemplate() {
