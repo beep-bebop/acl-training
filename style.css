@@ -1474,6 +1474,123 @@ body::after {
   50% { box-shadow: 0 0 0 8px rgba(255,149,0,0); }
 }
 
+@media (min-width: 900px) {
+  :root {
+    --device-width: 1180px;
+  }
+
+  body::before,
+  body::after {
+    display: none;
+  }
+
+  .top-nav,
+  .bottom-bar {
+    width: min(calc(100vw - 48px), var(--device-width));
+  }
+
+  .content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  #libraryContent,
+  #calendarContent,
+  #detailContent > div,
+  #pageSettings > div {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .stage-section,
+  .detail-module,
+  .training-module,
+  .settings-card,
+  .day-detail {
+    box-shadow: 0 10px 24px rgba(31,48,86,0.08);
+  }
+
+  .plan-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-card {
+    min-height: 88px;
+  }
+
+  .group-manage-panel {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+  }
+
+  .group-manage-panel .manage-subtitle {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .group-manage-actions,
+  .plan-manage-actions {
+    margin-top: 0;
+    justify-content: flex-end;
+  }
+
+  .detail-module-toolbar {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .detail-module-hint {
+    margin-top: 0;
+    text-align: left;
+  }
+
+  .detail-ex-editor {
+    display: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 10px;
+    align-items: end;
+  }
+
+  .detail-ex-item.editing .detail-ex-editor {
+    display: grid;
+  }
+
+  .detail-ex-edit-name,
+  .detail-ex-edit-sets,
+  .detail-ex-edit-reps,
+  .detail-ex-edit-duration,
+  .detail-ex-edit-mode,
+  .detail-mode-panel,
+  .detail-ai-btn,
+  .detail-save-btn {
+    margin-bottom: 0;
+  }
+
+  .detail-ex-edit-tip,
+  .detail-ai-btn,
+  .detail-save-btn {
+    grid-column: span 2;
+  }
+
+  .training-action-dock {
+    position: static;
+    grid-template-columns: 1fr auto auto;
+    max-width: 760px;
+    margin: 0 auto 18px;
+  }
+
+  .settings-section {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* ===== 内联计时小圆圈（已废弃，保留兼容性）===== */
 .inline-timer {
   display: none !important;

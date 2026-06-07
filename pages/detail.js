@@ -11,12 +11,11 @@ import { mountDetailModuleSorter } from '../services/drag-sort.js';
 
 const DOT_COLORS = { warmup: '#34C759', stretch: '#5AC8FA', activate: '#FF9500', main: '#5856D6', core: '#FF2D55', cooldown: '#5AC8FA', cardio: '#FF3B30', custom: '#8E8E93' };
 const TIMED_MODULE_TYPES = new Set(['warmup', 'stretch', 'cooldown']);
-const MODULE_ICON_CANDIDATES = ['🧘', '🤸', '⚡', '💪', '🎯', '🔥', '🌙', '🏃', '🛡️', '🧩', '🦵', '🏋️'];
+const MODULE_TYPE_ICONS = { warmup: '热', stretch: '拉', activate: '激', main: '练', core: '核', cooldown: '松', cardio: '氧', custom: '自' };
 let activeEditorKey = null;
 let pendingAddModuleIdx = null;
 let enrichingKey = null;
 let editingModuleIdx = null;
-let pendingModuleEmoji = '🧩';
 
 function editorKey(mi, ei) {
   return `${mi}_${ei}`;
@@ -116,19 +115,7 @@ function getModuleDialogEls() {
     title: document.getElementById('moduleEditorTitle'),
     name: document.getElementById('moduleNameInput'),
     type: document.getElementById('moduleTypeSelect'),
-    emojiPreview: document.getElementById('moduleEmojiPreview'),
-    emojiGrid: document.getElementById('moduleEmojiGrid'),
   };
-}
-
-function renderModuleEmojiGrid(selectedEmoji) {
-  const els = getModuleDialogEls();
-  if (!els.emojiGrid) return;
-  els.emojiGrid.innerHTML = MODULE_ICON_CANDIDATES.map((emoji) => {
-    const active = emoji === selectedEmoji ? ' active' : '';
-    return `<button class="emoji-chip${active}" type="button" data-module-emoji="${encodeURIComponent(emoji)}">${escapeHtml(emoji)}</button>`;
-  }).join('');
-  if (els.emojiPreview) els.emojiPreview.textContent = selectedEmoji || '🧩';
 }
 
 function persistEditorByKey(key, { toast = false } = {}) {
@@ -201,18 +188,18 @@ export function renderDetail() {
   html += `<div class="detail-plan-desc">${modules.length} 个模块 · ${exCount} 个动作</div>`;
   html += '<div class="detail-module-toolbar">';
   html += '<button class="detail-module-main-btn" type="button" data-add-module>+ 新增模块</button>';
-  html += '<div class="detail-module-hint">点击模块名称可编辑名称，点击图标可换 Emoji，长按模块头可排序</div>';
+  html += '<div class="detail-module-hint">点击模块名称可编辑名称和类型，长按模块头可排序</div>';
   html += '</div>';
 
   html += '<div id="detailModuleList">';
   modules.forEach((mod, mi) => {
     const safeModType = sanitizeClassToken(mod.type || 'custom');
     const dotColor = DOT_COLORS[safeModType] || '#8E8E93';
-    const safeModIcon = escapeHtml(mod.icon || '•');
+    const safeModIcon = escapeHtml(MODULE_TYPE_ICONS[safeModType] || MODULE_TYPE_ICONS.custom);
     const safeModName = escapeHtml(mod.name || '');
     const moduleExercises = getModuleExercises(state.currentPlanId, mi, state.plans, {});
     html += `<div class="detail-module"><div class="detail-module-head">`;
-    html += `<button class="detail-module-icon ${safeModType}" type="button" data-module-edit-emoji="${mi}" title="点击修改模块图标">${safeModIcon}</button>`;
+    html += `<div class="detail-module-icon ${safeModType}" aria-hidden="true">${safeModIcon}</div>`;
     html += `<div class="detail-module-info"><button class="detail-module-name-btn" type="button" data-module-edit-name="${mi}">${safeModName}</button>`;
     html += `<div class="detail-module-count">${moduleExercises.length} 个动作</div></div>`;
     html += `<button class="detail-module-delete-btn" type="button" data-del-module="${mi}"${modules.length <= 1 ? ' disabled' : ''}>删除</button>`;
@@ -311,10 +298,6 @@ export function saveDetailEditor(mi, ei) {
 }
 
 export function openModuleDialog(mi = null) {
-  return openModuleDialogWithFocus(mi, 'name');
-}
-
-function openModuleDialogWithFocus(mi = null, focusTarget = 'name') {
   const plan = getPlan(state.currentPlanId, state.plans);
   if (!plan) return;
   if (activeEditorKey) persistEditorByKey(activeEditorKey);
@@ -324,49 +307,26 @@ function openModuleDialogWithFocus(mi = null, focusTarget = 'name') {
   editingModuleIdx = Number.isInteger(mi) ? mi : null;
 
   if (module) {
-    pendingModuleEmoji = module.icon || '🧩';
-    if (els.title) {
-      els.title.textContent = focusTarget === 'emoji' ? '🧩 编辑模块图标' : '🧩 编辑模块';
-    }
+    if (els.title) els.title.textContent = '编辑模块';
     if (els.name) els.name.value = module.name || '';
     if (els.type) els.type.value = normalizeModuleType(module.type);
   } else {
-    pendingModuleEmoji = '🧩';
-    if (els.title) els.title.textContent = '➕ 新增模块';
+    if (els.title) els.title.textContent = '新增模块';
     if (els.name) els.name.value = '新模块';
     if (els.type) els.type.value = 'custom';
   }
-  renderModuleEmojiGrid(pendingModuleEmoji);
   els.overlay.classList.add('show');
-  if (focusTarget === 'emoji') {
-    setTimeout(() => {
-      const selected = els.emojiGrid?.querySelector(`[data-module-emoji="${encodeURIComponent(pendingModuleEmoji)}"]`);
-      const first = els.emojiGrid?.querySelector('[data-module-emoji]');
-      if (selected) selected.focus();
-      else if (first) first.focus();
-    }, 0);
-  } else if (els.name) {
-    setTimeout(() => els.name.focus(), 0);
-  }
+  if (els.name) setTimeout(() => els.name.focus(), 0);
 }
 
 export function editModuleName(mi) {
-  openModuleDialogWithFocus(mi, 'name');
-}
-
-export function editModuleEmoji(mi) {
-  openModuleDialogWithFocus(mi, 'emoji');
+  openModuleDialog(mi);
 }
 
 export function closeModuleDialog() {
   const els = getModuleDialogEls();
   if (els.overlay) els.overlay.classList.remove('show');
   editingModuleIdx = null;
-}
-
-export function pickModuleDialogEmoji(emoji) {
-  pendingModuleEmoji = String(emoji || '').trim() || '🧩';
-  renderModuleEmojiGrid(pendingModuleEmoji);
 }
 
 export function confirmModuleDialog() {
@@ -376,13 +336,12 @@ export function confirmModuleDialog() {
   const els = getModuleDialogEls();
   const name = (els.name?.value || '').trim() || '新模块';
   const type = normalizeModuleType(els.type?.value || 'custom');
-  const icon = pendingModuleEmoji || '🧩';
 
   if (editingModuleIdx === null || editingModuleIdx === undefined) {
     plan.modules.push({
       id: nextModuleId(plan),
       name,
-      icon,
+      icon: MODULE_TYPE_ICONS[type] || MODULE_TYPE_ICONS.custom,
       type,
       exercises: [],
     });
@@ -391,7 +350,6 @@ export function confirmModuleDialog() {
     const mod = plan.modules[editingModuleIdx];
     if (!mod) return;
     mod.name = name;
-    mod.icon = icon;
     mod.type = type;
     showToast('✅ 模块已更新');
   }

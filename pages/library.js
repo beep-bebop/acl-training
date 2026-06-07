@@ -214,7 +214,7 @@ function renderGroupBadge(groupMeta, safeGradient, fallbackText, safeGroupName) 
   return `<div class="stage-badge" style="background:${safeGradient}">${text}</div>`;
 }
 
-function renderGroupManagePanel(groupMeta, encodedGroupId) {
+export function renderGroupManagePanel(groupMeta, encodedGroupId) {
   const safeName = escapeHtml(groupMeta.name || '');
   return `<div class="group-manage-panel">
     <label class="manage-label">计划组名称
@@ -222,21 +222,18 @@ function renderGroupManagePanel(groupMeta, encodedGroupId) {
     </label>
     <div class="manage-subtitle">长按分组标题或计划卡可拖拽排序</div>
     <div class="group-manage-actions">
-      <button class="manage-btn" type="button" data-group-random-art="${encodedGroupId}">随机矢量图</button>
       <button class="manage-btn" type="button" data-add-plan="${encodedGroupId}">+ 增加计划</button>
       <button class="manage-btn danger" type="button" data-delete-group="${encodedGroupId}">删除分组</button>
     </div>
   </div>`;
 }
 
-function renderPlanManagePanel(plan, encodedPlanId) {
+export function renderPlanManagePanel(plan, encodedPlanId) {
   const safePlanName = escapeHtml(plan.name || '');
   return `<div class="plan-manage-panel">
     <label class="manage-label">计划名称
       <input class="manage-input" data-plan-name-input="${encodedPlanId}" value="${safePlanName}" />
     </label>
-    <div class="manage-subtitle">计划 Emoji</div>
-    ${buildPlanEmojiPicker(plan.id, plan.icon || '🏋️')}
     <div class="plan-manage-actions">
       <button class="manage-btn danger" type="button" data-delete-plan="${encodedPlanId}">删除计划</button>
     </div>

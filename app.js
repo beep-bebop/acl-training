@@ -4,15 +4,14 @@ import { loadState } from './services/plans.js';
 import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
   addPlanGroup, removePlanGroup, updatePlanGroupName,
-  setPlanGroupRandomArt,
-  addPlanToGroup, removePlanById, updatePlanName, setPlanEmoji, decodeLibraryToken
+  addPlanToGroup, removePlanById, updatePlanName, decodeLibraryToken
 } from './pages/library.js';
 import {
   openPlanDetail, renderDetail, toggleDetailEditor,
   saveDetailEditor, openAddExerciseDialog, closeAddExerciseDialog,
   confirmAddExerciseDialog, syncAddExerciseDialogMode, enrichDetailWithModel, flushDetailEditorChanges,
-  openModuleDialog, closeModuleDialog, confirmModuleDialog, pickModuleDialogEmoji, removeDetailModule,
-  editModuleName, editModuleEmoji
+  openModuleDialog, closeModuleDialog, confirmModuleDialog, removeDetailModule,
+  editModuleName
 } from './pages/detail.js';
 import {
   startTraining, renderTraining, toggleSet, setExerciseRest, stopTrainingDurationTicker,
@@ -181,19 +180,6 @@ function setupEventDelegation() {
       return;
     }
 
-    const groupArtBtn = e.target.closest('[data-group-random-art]');
-    if (groupArtBtn) {
-      setPlanGroupRandomArt(groupArtBtn.dataset.groupRandomArt || '');
-      return;
-    }
-
-    const planEmojiBtn = e.target.closest('[data-plan-emoji]');
-    if (planEmojiBtn) {
-      const [planToken, emojiToken] = planEmojiBtn.dataset.planEmoji.split('|');
-      setPlanEmoji(planToken, decodeLibraryToken(emojiToken));
-      return;
-    }
-
     const delPlanBtn = e.target.closest('[data-delete-plan]');
     if (delPlanBtn) {
       removePlanById(delPlanBtn.dataset.deletePlan || '');
@@ -271,12 +257,6 @@ function setupEventDelegation() {
       return;
     }
 
-    const moduleEmojiBtn = e.target.closest('[data-module-edit-emoji]');
-    if (moduleEmojiBtn) {
-      editModuleEmoji(parseInt(moduleEmojiBtn.dataset.moduleEditEmoji, 10));
-      return;
-    }
-
     const delModule = e.target.closest('[data-del-module]');
     if (delModule) {
       removeDetailModule(parseInt(delModule.dataset.delModule, 10));
@@ -302,10 +282,6 @@ function setupEventDelegation() {
     if (e.target.id === 'moduleEditorOverlay') { closeModuleDialog(); return; }
     if (e.target.closest('[data-module-cancel]')) { closeModuleDialog(); return; }
     if (e.target.closest('[data-module-confirm]')) { confirmModuleDialog(); return; }
-    const emojiBtn = e.target.closest('[data-module-emoji]');
-    if (emojiBtn) {
-      pickModuleDialogEmoji(decodeURIComponent(emojiBtn.dataset.moduleEmoji || ''));
-    }
   });
 
   document.getElementById('moduleEditorOverlay').addEventListener('keydown', (e) => {
