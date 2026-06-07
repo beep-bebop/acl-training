@@ -909,6 +909,82 @@ body::after {
   font-size: 12px; color: var(--text3); margin-top: 8px;
   text-align: center; font-weight: 600;
 }
+.training-end-btn {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid rgba(255,59,48,0.22);
+  background: rgba(255,59,48,0.08);
+  color: var(--danger);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.training-action-dock {
+  position: sticky;
+  bottom: calc(var(--safe-bottom) + 10px);
+  z-index: 80;
+  margin: 0 6px 14px;
+  padding: 12px;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.86);
+  backdrop-filter: var(--blur-heavy);
+  -webkit-backdrop-filter: var(--blur-heavy);
+  box-shadow: 0 14px 34px rgba(52,76,132,0.18);
+}
+.training-action-dock.done {
+  grid-template-columns: 1fr auto;
+}
+.training-next-action {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.training-next-action .tna-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.training-next-action strong {
+  font-size: 15px;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.training-next-action span:last-child {
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.training-dock-primary,
+.training-dock-secondary {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.training-dock-primary {
+  background: linear-gradient(135deg, var(--primary), #5856D6);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0,122,255,0.28);
+}
+.training-dock-secondary {
+  background: rgba(142,142,147,0.12);
+  color: var(--text2);
+}
 .training-module {
   margin: 0 6px 12px; border-radius: 18px;
   background: linear-gradient(145deg, rgba(255,255,255,0.74), rgba(255,255,255,0.44));
@@ -1124,8 +1200,9 @@ body::after {
   display: flex; gap: 4px; margin-left: 4px;
 }
 .timer-pill .tp-actions button {
-  width: 30px; height: 30px; border-radius: 50%;
-  border: none; font-size: 13px; font-weight: 700;
+  min-width: 42px; height: 30px; border-radius: 999px;
+  padding: 0 9px;
+  border: none; font-size: 12px; font-weight: 800;
   cursor: pointer; transition: all 0.15s;
   display: flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,0.2); color: #fff;

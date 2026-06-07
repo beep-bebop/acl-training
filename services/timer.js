@@ -54,7 +54,7 @@ export function showTimerPill(doneSet, secs, onDone = null) {
   updateTimerUI();
   pill.classList.add('show');
   const pauseBtn = document.getElementById('tpPauseBtn');
-  if (pauseBtn) pauseBtn.textContent = '⏸';
+  if (pauseBtn) pauseBtn.textContent = '暂停';
   
   initVisibilityHandler();
   
@@ -114,7 +114,7 @@ export function pauseTimer() {
       finishTimer(pill, doneSet);
     }, remaining * 1000 + 100);
   }
-  document.getElementById('tpPauseBtn').textContent = timerPaused ? '▶' : '⏸';
+  document.getElementById('tpPauseBtn').textContent = timerPaused ? '继续' : '暂停';
 }
 
 function sendNotification(title, body) {

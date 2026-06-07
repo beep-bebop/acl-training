@@ -132,6 +132,66 @@ export function buildSessionSummary({ plan, progress = {}, startedAt, endedAt, d
   };
 }
 
+export function getNextTrainingAction(plan, progress = {}) {
+  if (!plan) return { done: true };
+  for (let mi = 0; mi < (plan.modules || []).length; mi++) {
+    const mod = plan.modules[mi];
+    for (let ei = 0; ei < (mod.exercises || []).length; ei++) {
+      const ex = mod.exercises[ei];
+      const totalSets = getSetCount(ex);
+      const key = getExerciseKeyForSummary(plan, mi, ei);
+      for (let si = 0; si < totalSets; si++) {
+        if (!progress[`${key}_s${si}`]) {
+          return {
+            done: false,
+            moduleIndex: mi,
+            exerciseIndex: ei,
+            setIndex: si,
+            totalSets,
+            moduleName: mod.name || `模块 ${mi + 1}`,
+            exerciseName: ex.name || `动作 ${ei + 1}`,
+            isTimed: isTimedMode(ex),
+            duration: getDuration(ex),
+          };
+        }
+      }
+    }
+  }
+  return { done: true };
+}
+
+export function renderTrainingActionDock({ encodedPlanId, action }) {
+  if (!action || action.done) {
+    return `
+      <div class="training-action-dock done">
+        <div class="training-next-action">
+          <span class="tna-label">今日计划</span>
+          <strong>已全部完成</strong>
+        </div>
+        <button class="training-dock-primary" type="button" data-end-training>记录并结束</button>
+      </div>`;
+  }
+
+  const safeModuleName = escapeHtml(action.moduleName);
+  const safeExerciseName = escapeHtml(action.exerciseName);
+  const setLabel = `第 ${action.setIndex + 1}/${action.totalSets} 组`;
+  const actionAttr = action.isTimed
+    ? `data-start-timer="${encodedPlanId}|${action.moduleIndex}|${action.exerciseIndex}|${action.duration}|${action.totalSets}"`
+    : `data-toggle-set="${encodedPlanId}|${action.moduleIndex}|${action.exerciseIndex}|${action.setIndex}"`;
+  const buttonText = action.isTimed ? `开始 ${action.duration} 秒` : '完成本组';
+
+  return `
+    <div class="training-action-dock">
+      <div class="training-next-action">
+        <span class="tna-label">下一步 · ${escapeHtml(setLabel)}</span>
+        <strong>${safeExerciseName}</strong>
+        <span>${safeModuleName}</span>
+      </div>
+      <button class="training-dock-primary" type="button" ${actionAttr}>${buttonText}</button>
+      <button class="training-dock-secondary" type="button" data-end-training>结束</button>
+    </div>`;
+}
+
 function updateTrainingDurationDisplay() {
   const el = document.getElementById('trainingElapsedValue');
   if (!el || !state.runtime.trainingSessionStartAt) return;
@@ -263,6 +323,10 @@ export function renderTraining() {
   html += `<button class="training-end-btn" type="button" data-end-training>结束训练</button>`;
   html += `<div class="training-progress-bar"><div class="training-progress-fill" style="width:${pct}%"></div></div>`;
   html += `<div class="training-progress-text">${prog.done} / ${prog.total} 个动作完成</div></div>`;
+  html += renderTrainingActionDock({
+    encodedPlanId,
+    action: getNextTrainingAction(plan, state.runtime.progress),
+  });
 
   // 找活跃模块
   let activeModuleIdx = -1;
