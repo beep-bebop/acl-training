@@ -88,6 +88,50 @@ function formatElapsed(totalSeconds) {
   return `${mm}:${ss}`;
 }
 
+function getExerciseKeyForSummary(plan, mi, ei) {
+  const ex = plan?.modules?.[mi]?.exercises?.[ei];
+  return ex?.id || `${plan?.id || ''}_${mi}_${ei}`;
+}
+
+export function buildSessionSummary({ plan, progress = {}, startedAt, endedAt, date }) {
+  const safePlan = plan || {};
+  const start = Number(startedAt) || Number(endedAt) || Date.now();
+  const end = Number(endedAt) || Date.now();
+  let completedSets = 0;
+  let totalSets = 0;
+  let completedExercises = 0;
+  let totalExercises = 0;
+
+  (safePlan.modules || []).forEach((mod, mi) => {
+    (mod.exercises || []).forEach((ex, ei) => {
+      const setCount = getSetCount(ex);
+      const key = getExerciseKeyForSummary(safePlan, mi, ei);
+      let doneForExercise = 0;
+      totalExercises += 1;
+      totalSets += setCount;
+      for (let s = 0; s < setCount; s++) {
+        if (progress[`${key}_s${s}`]) {
+          completedSets += 1;
+          doneForExercise += 1;
+        }
+      }
+      if (doneForExercise >= setCount) completedExercises += 1;
+    });
+  });
+
+  return {
+    date,
+    planId: safePlan.id || '',
+    planName: safePlan.name || '未命名计划',
+    durationSeconds: Math.max(0, Math.floor((end - start) / 1000)),
+    completedSets,
+    totalSets,
+    completedExercises,
+    totalExercises,
+    completedPlan: totalExercises > 0 && completedExercises >= totalExercises,
+  };
+}
+
 function updateTrainingDurationDisplay() {
   const el = document.getElementById('trainingElapsedValue');
   if (!el || !state.runtime.trainingSessionStartAt) return;
@@ -164,6 +208,25 @@ export function startTraining(planId) {
   return planId;
 }
 
+export function finishTrainingSession() {
+  const plan = getPlan(state.currentPlanId, state.plans);
+  if (!plan) return null;
+  const summary = buildSessionSummary({
+    plan,
+    progress: state.runtime.progress,
+    startedAt: state.runtime.trainingSessionStartAt || Date.now(),
+    endedAt: Date.now(),
+    date: todayStr(),
+  });
+  if (!Array.isArray(state.runtime.sessionLogs)) state.runtime.sessionLogs = [];
+  state.runtime.sessionLogs.push(summary);
+  state.runtime.trainingSessionStartAt = null;
+  saveToStorage();
+  showToast(`训练已记录：${summary.completedExercises}/${summary.totalExercises} 个动作，${formatElapsed(summary.durationSeconds)}`);
+  renderTraining();
+  return summary;
+}
+
 export function renderTraining() {
   const container = document.getElementById('trainingContent');
   if (!container) return;
@@ -197,6 +260,7 @@ export function renderTraining() {
   html += `<div class="training-elapsed"><span class="dot"></span><span class="label">总时长</span>`;
   html += `<span class="value" id="trainingElapsedValue">${formatElapsed(elapsedSeconds)}</span></div>`;
   html += `<div class="training-count-mini">${prog.done}/${prog.total} 完成</div></div>`;
+  html += `<button class="training-end-btn" type="button" data-end-training>结束训练</button>`;
   html += `<div class="training-progress-bar"><div class="training-progress-fill" style="width:${pct}%"></div></div>`;
   html += `<div class="training-progress-text">${prog.done} / ${prog.total} 个动作完成</div></div>`;
 

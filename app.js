@@ -17,7 +17,7 @@ import {
 import {
   startTraining, renderTraining, toggleSet, setExerciseRest, stopTrainingDurationTicker,
   openTrainingTipEditor, handleTrainingTipEditorInput, closeTrainingTipEditor, saveTrainingTipEditor,
-  startTimedExercise
+  startTimedExercise, finishTrainingSession
 } from './pages/training.js';
 import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calendar-page.js';
 import {
@@ -357,6 +357,12 @@ function setupEventDelegation() {
 
   // 训练页面 - 模块折叠
   document.getElementById('trainingContent').addEventListener('click', (e) => {
+    const endTrainingBtn = e.target.closest('[data-end-training]');
+    if (endTrainingBtn) {
+      finishTrainingSession();
+      return;
+    }
+
     // 模块折叠
     const modHead = e.target.closest('[data-toggle-module]');
     if (modHead) {

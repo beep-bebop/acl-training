@@ -275,6 +275,20 @@ function normalizeRuntime(rawRuntime) {
     progress: isObject(runtime.progress) ? runtime.progress : {},
     exerciseRest: isObject(runtime.exerciseRest) ? runtime.exerciseRest : {},
     calendarLogs: isObject(runtime.calendarLogs) ? runtime.calendarLogs : {},
+    sessionLogs: asArray(runtime.sessionLogs).map((entry) => {
+      const item = asObject(entry);
+      return {
+        date: cleanText(item.date),
+        planId: cleanText(item.planId),
+        planName: cleanText(item.planName),
+        durationSeconds: asPositiveInt(item.durationSeconds, 0),
+        completedSets: asPositiveInt(item.completedSets, 0),
+        totalSets: asPositiveInt(item.totalSets, 0),
+        completedExercises: asPositiveInt(item.completedExercises, 0),
+        totalExercises: asPositiveInt(item.totalExercises, 0),
+        completedPlan: !!item.completedPlan,
+      };
+    }).filter(item => item.date && item.planId),
     trainingDate: cleanText(runtime.trainingDate),
     trainingSessionStartAt: Number.isFinite(Number(runtime.trainingSessionStartAt))
       ? Number(runtime.trainingSessionStartAt)
@@ -316,6 +330,7 @@ export function createEmptyV7Snapshot() {
       progress: {},
       exerciseRest: {},
       calendarLogs: {},
+      sessionLogs: [],
       trainingDate: todayStr(),
       trainingSessionStartAt: null,
     },
@@ -627,6 +642,7 @@ export function migrateLegacyStateToV7(options = {}) {
     progress,
     exerciseRest,
     calendarLogs: normalizeCalendarLogs(legacy.calendarLogs),
+    sessionLogs: [],
     trainingDate: cleanText(legacy.trainingDate) || todayStr(),
     trainingSessionStartAt: Number.isFinite(Number(legacy.trainingSessionStartAt))
       ? Number(legacy.trainingSessionStartAt)

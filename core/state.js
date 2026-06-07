@@ -12,6 +12,7 @@ export const state = {
     progress: {},             // { [exerciseId_s0]: true }
     exerciseRest: {},         // { [exerciseId]: rest seconds }
     calendarLogs: {},         // 'YYYY-MM-DD' => [{ planId, exerciseId, name, planName, time }]
+    sessionLogs: [],          // [{ date, planId, durationSeconds, completedSets, completedExercises }]
     trainingDate: null,
     trainingSessionStartAt: null,
   },
