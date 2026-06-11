@@ -75,18 +75,11 @@
         </div>
       </div>
       <div class="settings-section">
-        <h3>远程同步</h3>
+        <h3>数据备份</h3>
         <div class="settings-card">
           <div class="settings-item ai-config-wrap">
-            <label class="ai-config-label" for="remoteSyncSourceInput">远程计划地址</label>
-            <input id="remoteSyncSourceInput" class="ai-config-input" type="text" value="data/catalog.v7.json" placeholder="data/catalog.v7.json 或完整 URL">
-            <div class="ai-config-actions">
-              <button class="btn-primary" type="button" data-preview-remote-sync>拉取并预览</button>
-              <button class="btn-secondary" type="button" id="remoteSyncApplyBtn" data-apply-remote-sync style="display:none;">确认合并</button>
-            </div>
-            <div id="remoteSyncPreview" style="padding:10px;border-radius:10px;background:rgba(0,0,0,0.03);font-size:12px;color:var(--text3);line-height:1.5;">点击“拉取并预览”查看远程变更。</div>
-            <div class="ai-config-hint">上次同步记录</div>
-            <div id="syncMetaSummary" class="ai-config-hint">尚未执行远程同步</div>
+            <div class="warn-notice">浏览器本地缓存不是可靠备份。清缓存、换设备、换浏览器都可能丢数据。</div>
+            <div class="ai-config-hint">代码更新和网页部署不会主动写入训练数据。长期保存请定期导出全部数据 JSON；该文件包含计划、训练记录和统计汇总，可通过导入恢复。</div>
           </div>
         </div>
       </div>
@@ -177,10 +170,9 @@
       }
     ]
   },
-  "runtime": { "progress": {}, "exerciseRest": {}, "calendarLogs": {} },
+  "runtime": { "progress": {}, "exerciseRest": {}, "calendarLogs": {}, "sessionLogs": [] },
   "settings": {
-    "aiConfig": { "deepseekApiKey": "", "deepseekModel": "deepseek-v4-flash" },
-    "syncMeta": { "lastSyncAt": "", "lastSource": "", "lastRemoteHash": "", "lastSummary": "" }
+    "aiConfig": { "deepseekApiKey": "", "deepseekModel": "deepseek-v4-flash" }
   }
 }</pre>
           </div>
