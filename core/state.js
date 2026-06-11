@@ -35,6 +35,7 @@ export const state = {
       lastBackupAt: '',
       lastRestoreAt: '',
       lastCommitSha: '',
+      lastAutoBackupStatus: '',
     },
   },
 

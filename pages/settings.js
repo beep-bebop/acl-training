@@ -153,6 +153,7 @@ function ensureGitHubBackupSettings() {
     lastBackupAt: state.settings.githubBackup?.lastBackupAt || '',
     lastRestoreAt: state.settings.githubBackup?.lastRestoreAt || '',
     lastCommitSha: state.settings.githubBackup?.lastCommitSha || '',
+    lastAutoBackupStatus: state.settings.githubBackup?.lastAutoBackupStatus || '',
   };
   return state.settings.githubBackup;
 }
@@ -177,7 +178,21 @@ export function hydrateGitHubBackupInputs() {
   if (branchInput) branchInput.value = config.branch || 'main';
   if (pathInput) pathInput.value = config.path || 'acl-training-backup.json';
   if (tokenInput) tokenInput.value = loadGitHubBackupToken();
-  updateGitHubBackupStatus(`上次备份：${formatBackupTime(config.lastBackupAt)}；上次恢复：${formatBackupTime(config.lastRestoreAt)}`);
+  const autoStatus = config.lastAutoBackupStatus ? `；自动备份：${config.lastAutoBackupStatus}` : '';
+  updateGitHubBackupStatus(`上次备份：${formatBackupTime(config.lastBackupAt)}；上次恢复：${formatBackupTime(config.lastRestoreAt)}${autoStatus}`);
+}
+
+export function setGitHubBackupAutoStatus(status) {
+  const message = status?.message || '';
+  if (!message) return;
+  const suffix = status.state === 'error' ? `失败：${message}` : message;
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  if (!state.settings) state.settings = {};
+  state.settings.githubBackup = {
+    ...(state.settings.githubBackup || {}),
+    lastAutoBackupStatus: `${suffix}（${time}）`,
+  };
+  hydrateGitHubBackupInputs();
 }
 
 function persistGitHubBackupConfig() {

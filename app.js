@@ -1,6 +1,7 @@
 // ACL 康复训练 - 入口模块（导航 + 事件委托 + 初始化）
 import { state } from './core/state.js';
 import { loadState } from './services/plans.js';
+import { initAutoGitHubBackup } from './services/auto-backup.js';
 import {
   renderLibrary, toggleLibraryStage, togglePlanGroupSettings,
   addPlanGroup, removePlanGroup, updatePlanGroupName,
@@ -23,9 +24,10 @@ import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
   exportCurrentPlan, saveAiConfig, clearAiApiKey, hydrateAiConfigInputs,
   saveGitHubBackupConfig, backupToGitHub, restoreFromGitHub,
-  clearGitHubBackupTokenSetting, initTheme, toggleTheme
+  clearGitHubBackupTokenSetting, setGitHubBackupAutoStatus, initTheme, toggleTheme
 } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
+import { showToast } from './utils/helpers.js';
 import {
   skipTimer, cancelTimer, pauseTimer,
   startRestWithDuration, closeTimerManual,
@@ -455,6 +457,7 @@ function setupEventDelegation() {
 // ===== 初始化 =====
 async function init() {
   await loadState();
+  initAutoGitHubBackup(setGitHubBackupAutoStatus);
   hydrateAiConfigInputs();
   setupEventDelegation();
   initTheme();

@@ -279,6 +279,7 @@ function normalizeGitHubBackup(rawGitHubBackup) {
     lastBackupAt: cleanText(cfg.lastBackupAt),
     lastRestoreAt: cleanText(cfg.lastRestoreAt),
     lastCommitSha: cleanText(cfg.lastCommitSha),
+    lastAutoBackupStatus: cleanText(cfg.lastAutoBackupStatus),
   };
 }
 
@@ -367,6 +368,7 @@ export function createEmptyV7Snapshot() {
         lastBackupAt: '',
         lastRestoreAt: '',
         lastCommitSha: '',
+        lastAutoBackupStatus: '',
       },
     },
   };

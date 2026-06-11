@@ -10,6 +10,14 @@ try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); storageOK 
 
 export { storageOK };
 
+const afterSaveListeners = new Set();
+
+export function addAfterSaveListener(listener) {
+  if (typeof listener !== 'function') return () => {};
+  afterSaveListeners.add(listener);
+  return () => afterSaveListeners.delete(listener);
+}
+
 export function loadFromStorage() {
   if (!storageOK) return null;
   try {
@@ -43,11 +51,16 @@ export function buildSnapshotFromState() {
   };
 }
 
-export function saveToStorage() {
+export function saveToStorage(options = {}) {
   try {
     if (!storageOK) return;
     const snapshot = buildSnapshotFromState();
     localStorage.setItem(STORAGE_KEY_V7, JSON.stringify(snapshot));
+    if (!options.skipBackup) {
+      afterSaveListeners.forEach((listener) => {
+        try { listener(snapshot); } catch (_err) {}
+      });
+    }
   } catch (e) { /* quota exceeded, silently fail */ }
 }
 
