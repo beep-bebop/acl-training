@@ -27,6 +27,15 @@ export const state = {
       lastRemoteHash: '',
       lastSummary: '',
     },
+    githubBackup: {
+      owner: '',
+      repo: '',
+      branch: 'main',
+      path: 'acl-training-backup.json',
+      lastBackupAt: '',
+      lastRestoreAt: '',
+      lastCommitSha: '',
+    },
   },
 
   // 兼容层（只保留派生数据）

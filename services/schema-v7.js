@@ -269,6 +269,19 @@ function normalizeSyncMeta(rawSyncMeta) {
   };
 }
 
+function normalizeGitHubBackup(rawGitHubBackup) {
+  const cfg = asObject(rawGitHubBackup);
+  return {
+    owner: cleanText(cfg.owner),
+    repo: cleanText(cfg.repo),
+    branch: cleanText(cfg.branch) || 'main',
+    path: cleanText(cfg.path) || 'acl-training-backup.json',
+    lastBackupAt: cleanText(cfg.lastBackupAt),
+    lastRestoreAt: cleanText(cfg.lastRestoreAt),
+    lastCommitSha: cleanText(cfg.lastCommitSha),
+  };
+}
+
 function normalizeRuntime(rawRuntime) {
   const runtime = asObject(rawRuntime);
   return {
@@ -301,6 +314,7 @@ function normalizeSettings(rawSettings) {
   return {
     aiConfig: normalizeAiConfig(settings.aiConfig),
     syncMeta: normalizeSyncMeta(settings.syncMeta),
+    githubBackup: normalizeGitHubBackup(settings.githubBackup),
   };
 }
 
@@ -344,6 +358,15 @@ export function createEmptyV7Snapshot() {
         lastSource: '',
         lastRemoteHash: '',
         lastSummary: '',
+      },
+      githubBackup: {
+        owner: '',
+        repo: '',
+        branch: 'main',
+        path: 'acl-training-backup.json',
+        lastBackupAt: '',
+        lastRestoreAt: '',
+        lastCommitSha: '',
       },
     },
   };
@@ -655,6 +678,7 @@ export function migrateLegacyStateToV7(options = {}) {
     runtime,
     settings: {
       aiConfig: normalizeAiConfig(legacy.aiConfig),
+      githubBackup: normalizeGitHubBackup(legacy.githubBackup),
     },
   };
   return normalizeV7Snapshot(snapshot);

@@ -4,6 +4,14 @@ import { saveToStorage, clearAllProgress } from '../core/storage.js';
 import {
   getCurrentSnapshot, importPlans, loadDefaultCatalogSnapshot
 } from '../services/plans.js';
+import {
+  normalizeGitHubBackupConfig,
+  loadGitHubBackupToken,
+  saveGitHubBackupToken,
+  clearGitHubBackupToken,
+  pushGitHubBackup,
+  pullGitHubBackup,
+} from '../services/github-backup.js';
 import { showToast, copyToClipboard } from '../utils/helpers.js';
 import { renderLibrary } from './library.js';
 
@@ -11,6 +19,9 @@ function buildSnapshotForExport() {
   const snapshot = getCurrentSnapshot();
   if (snapshot.settings?.aiConfig) {
     snapshot.settings.aiConfig.deepseekApiKey = '';
+  }
+  if (snapshot.settings?.githubBackup) {
+    delete snapshot.settings.githubBackup.token;
   }
   return snapshot;
 }
@@ -108,6 +119,139 @@ export function hydrateAiConfigInputs() {
       : 'deepseek-v4-flash';
     modelSelect.value = model;
   }
+  hydrateGitHubBackupInputs();
+}
+
+function getGitHubBackupInputs() {
+  return {
+    ownerInput: document.getElementById('githubBackupOwnerInput'),
+    repoInput: document.getElementById('githubBackupRepoInput'),
+    branchInput: document.getElementById('githubBackupBranchInput'),
+    pathInput: document.getElementById('githubBackupPathInput'),
+    tokenInput: document.getElementById('githubBackupTokenInput'),
+    statusEl: document.getElementById('githubBackupStatus'),
+  };
+}
+
+function readGitHubBackupForm() {
+  const { ownerInput, repoInput, branchInput, pathInput, tokenInput } = getGitHubBackupInputs();
+  return {
+    config: normalizeGitHubBackupConfig({
+      owner: ownerInput?.value,
+      repo: repoInput?.value,
+      branch: branchInput?.value,
+      path: pathInput?.value,
+    }),
+    token: tokenInput?.value?.trim() || loadGitHubBackupToken(),
+  };
+}
+
+function ensureGitHubBackupSettings() {
+  if (!state.settings) state.settings = {};
+  state.settings.githubBackup = {
+    ...normalizeGitHubBackupConfig(state.settings.githubBackup),
+    lastBackupAt: state.settings.githubBackup?.lastBackupAt || '',
+    lastRestoreAt: state.settings.githubBackup?.lastRestoreAt || '',
+    lastCommitSha: state.settings.githubBackup?.lastCommitSha || '',
+  };
+  return state.settings.githubBackup;
+}
+
+function updateGitHubBackupStatus(message) {
+  const { statusEl } = getGitHubBackupInputs();
+  if (statusEl) statusEl.textContent = message || '';
+}
+
+function formatBackupTime(value) {
+  if (!value) return '还没有记录';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+export function hydrateGitHubBackupInputs() {
+  const config = ensureGitHubBackupSettings();
+  const { ownerInput, repoInput, branchInput, pathInput, tokenInput } = getGitHubBackupInputs();
+  if (ownerInput) ownerInput.value = config.owner || '';
+  if (repoInput) repoInput.value = config.repo || '';
+  if (branchInput) branchInput.value = config.branch || 'main';
+  if (pathInput) pathInput.value = config.path || 'acl-training-backup.json';
+  if (tokenInput) tokenInput.value = loadGitHubBackupToken();
+  updateGitHubBackupStatus(`上次备份：${formatBackupTime(config.lastBackupAt)}；上次恢复：${formatBackupTime(config.lastRestoreAt)}`);
+}
+
+function persistGitHubBackupConfig() {
+  const { config, token } = readGitHubBackupForm();
+  const current = ensureGitHubBackupSettings();
+  state.settings.githubBackup = {
+    ...current,
+    ...config,
+  };
+  saveGitHubBackupToken(token);
+  saveToStorage();
+  hydrateGitHubBackupInputs();
+  return { config: state.settings.githubBackup, token };
+}
+
+export function saveGitHubBackupConfig() {
+  persistGitHubBackupConfig();
+  showToast('GitHub 数据仓库配置已保存');
+}
+
+export async function backupToGitHub() {
+  const { config, token } = persistGitHubBackupConfig();
+  updateGitHubBackupStatus('正在备份到 GitHub...');
+  const result = await pushGitHubBackup(getCurrentSnapshot(), config, token);
+  if (!result.ok) {
+    updateGitHubBackupStatus(result.msg || 'GitHub 备份失败');
+    showToast(`备份失败：${result.msg || '请检查仓库和 Token'}`);
+    return;
+  }
+  const current = ensureGitHubBackupSettings();
+  state.settings.githubBackup = {
+    ...current,
+    ...result.config,
+    lastBackupAt: result.exportedAt,
+    lastCommitSha: result.commitSha || current.lastCommitSha || '',
+  };
+  saveToStorage();
+  hydrateGitHubBackupInputs();
+  showToast('已备份到 GitHub 数据仓库');
+}
+
+export async function restoreFromGitHub() {
+  const { config, token } = persistGitHubBackupConfig();
+  if (!confirm('确定从 GitHub 数据仓库恢复吗？当前本机计划、记录和统计会被备份内容替换。')) return;
+  updateGitHubBackupStatus('正在从 GitHub 读取备份...');
+  const result = await pullGitHubBackup(config, token);
+  if (!result.ok) {
+    updateGitHubBackupStatus(result.msg || 'GitHub 恢复失败');
+    showToast(`恢复失败：${result.msg || '请检查备份文件'}`);
+    return;
+  }
+  const imported = importPlans(result.snapshot, 'replace');
+  if (!imported.ok) {
+    updateGitHubBackupStatus(imported.msg || '备份数据校验失败');
+    showToast(`恢复失败：${imported.msg}`);
+    return;
+  }
+  const current = ensureGitHubBackupSettings();
+  state.settings.githubBackup = {
+    ...current,
+    ...result.config,
+    lastRestoreAt: new Date().toISOString(),
+    lastCommitSha: result.sha || current.lastCommitSha || '',
+  };
+  saveToStorage();
+  renderLibrary();
+  hydrateGitHubBackupInputs();
+  showToast('已从 GitHub 恢复训练数据');
+}
+
+export function clearGitHubBackupTokenSetting() {
+  clearGitHubBackupToken();
+  hydrateGitHubBackupInputs();
+  showToast('已清空本机 GitHub Token');
 }
 
 export function saveAiConfig() {

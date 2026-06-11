@@ -493,6 +493,10 @@ export function importPlans(json, mergeStrategy = 'merge') {
         ...(current.settings.aiConfig || {}),
         ...(incomingSnapshot.settings.aiConfig || {}),
       },
+      githubBackup: {
+        ...(current.settings.githubBackup || {}),
+        ...(incomingSnapshot.settings.githubBackup || {}),
+      },
     };
   } else {
     let catalog = deepClone(current.catalog);

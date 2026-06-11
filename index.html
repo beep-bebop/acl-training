@@ -75,11 +75,30 @@
         </div>
       </div>
       <div class="settings-section">
-        <h3>数据备份</h3>
+        <h3>GitHub 数据仓库备份（推荐）</h3>
         <div class="settings-card">
           <div class="settings-item ai-config-wrap">
-            <div class="warn-notice">浏览器本地缓存不是可靠备份。清缓存、换设备、换浏览器都可能丢数据。</div>
-            <div class="ai-config-hint">代码更新和网页部署不会主动写入训练数据。长期保存请定期导出全部数据 JSON；该文件包含计划、训练记录和统计汇总，可通过导入恢复。</div>
+            <div class="warn-notice">请使用一个单独的私有 GitHub 仓库存训练数据，不要用 Gist 保存隐私训练记录。</div>
+            <div class="ai-config-hint">代码仓库只负责页面部署；数据仓库只保存计划、训练历史和统计快照。Token 只保存在当前设备，不会写入备份 JSON。</div>
+            <div class="github-backup-grid">
+              <label class="ai-config-label" for="githubBackupOwnerInput">Owner</label>
+              <input id="githubBackupOwnerInput" class="ai-config-input" type="text" placeholder="beep-bebop" autocomplete="off">
+              <label class="ai-config-label" for="githubBackupRepoInput">私有数据仓库</label>
+              <input id="githubBackupRepoInput" class="ai-config-input" type="text" placeholder="acl-training-data" autocomplete="off">
+              <label class="ai-config-label" for="githubBackupBranchInput">分支</label>
+              <input id="githubBackupBranchInput" class="ai-config-input" type="text" placeholder="main" autocomplete="off">
+              <label class="ai-config-label" for="githubBackupPathInput">备份文件路径</label>
+              <input id="githubBackupPathInput" class="ai-config-input" type="text" placeholder="acl-training-backup.json" autocomplete="off">
+              <label class="ai-config-label" for="githubBackupTokenInput">Fine-grained Token</label>
+              <input id="githubBackupTokenInput" class="ai-config-input" type="password" placeholder="只授权数据仓库 Contents 读写" autocomplete="off">
+            </div>
+            <div class="ai-config-actions">
+              <button class="btn-secondary" type="button" data-save-github-backup>保存配置</button>
+              <button class="btn-primary" type="button" data-github-backup-now>备份到 GitHub</button>
+              <button class="btn-export" type="button" data-github-restore>从 GitHub 恢复</button>
+              <button class="btn-secondary" type="button" data-clear-github-token>清空本机 Token</button>
+            </div>
+            <div id="githubBackupStatus" class="backup-meta"></div>
           </div>
         </div>
       </div>
@@ -172,7 +191,13 @@
   },
   "runtime": { "progress": {}, "exerciseRest": {}, "calendarLogs": {}, "sessionLogs": [] },
   "settings": {
-    "aiConfig": { "deepseekApiKey": "", "deepseekModel": "deepseek-v4-flash" }
+    "aiConfig": { "deepseekApiKey": "", "deepseekModel": "deepseek-v4-flash" },
+    "githubBackup": {
+      "owner": "",
+      "repo": "",
+      "branch": "main",
+      "path": "acl-training-backup.json"
+    }
   }
 }</pre>
           </div>
