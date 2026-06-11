@@ -1,7 +1,8 @@
-// ACL v7 schema/migration helpers
+// ACL schema/migration helpers. Function names keep v7 for compatibility.
 import { STAGES } from '../data/config.js';
 
-export const V7_VERSION = 7;
+export const V7_VERSION = 8;
+export const SCHEMA_VERSION = V7_VERSION;
 export const DEFAULT_AI_MODEL = 'deepseek-v4-flash';
 
 const DEFAULT_CUSTOM_GROUP = {
@@ -120,6 +121,163 @@ function normalizeEnrichment(raw) {
   return hasData ? normalized : null;
 }
 
+function normalizeTextBlock(raw, fallback = '') {
+  const text = cleanText(raw);
+  return text || fallback;
+}
+
+function inferMovementPattern(name, moduleType) {
+  const text = `${name} ${moduleType}`.toLowerCase();
+  if (/深蹲|蹲|倒蹬|腿伸展|leg extension|quad|股四/.test(text)) return 'knee-dominant';
+  if (/硬拉|rdl|腿弯举|腘绳|髋铰链|臀桥|hamstring|hinge/.test(text)) return 'hip-dominant';
+  if (/单腿|分腿|弓步|平衡|侧向|抛接球/.test(text)) return 'single-leg-control';
+  if (/卧推|推胸|推举|下压|肩/.test(text)) return 'upper-push';
+  if (/划船|下拉|引体|面拉|弯举/.test(text)) return 'upper-pull';
+  if (/死虫|帕洛夫|核心|伐木|抬腿|抗旋/.test(text)) return 'core-control';
+  if (/泡沫轴|按摩|松解/.test(text) || moduleType === 'warmup') return 'soft-tissue';
+  if (/拉伸|stretch/.test(text) || moduleType === 'stretch') return 'mobility';
+  if (moduleType === 'activate') return 'activation';
+  if (moduleType === 'cardio') return 'conditioning';
+  return 'general-strength';
+}
+
+function inferTargetTissue(name, tags) {
+  const text = `${name} ${asArray(tags).join(' ')}`;
+  if (/ACL|膝|股四|腿伸展|倒蹬|蹲|BFR/.test(text)) return '膝关节控制 / 股四头肌';
+  if (/腘绳|腿弯举|硬拉|RDL/.test(text)) return '腘绳肌 / 髋后链';
+  if (/臀|侧向|髋/.test(text)) return '臀肌 / 髋稳定';
+  if (/踝|小腿|提踵|足底/.test(text)) return '踝足小腿链';
+  if (/胸|肩|推|卧推/.test(text)) return '上肢推力链';
+  if (/背|划船|下拉|引体|面拉/.test(text)) return '上肢拉力链';
+  if (/核心|死虫|帕洛夫|伐木|抬腿/.test(text)) return '核心抗伸展/抗旋';
+  if (/泡沫轴|按摩|拉伸|放松/.test(text)) return '软组织与活动度';
+  return '全身协调';
+}
+
+function inferIntensity(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''} ${raw.reps || ''}`;
+  if (/BFR|血流限制/.test(text)) return '20-30% 1RM / BFR 低负荷';
+  if (/极轻|无负重|预演/.test(text)) return '极轻负荷 / 技术质量优先';
+  if (/大重量|负重|6-8/.test(text)) return '中高强度 / 保留1-3次余力';
+  if (moduleType === 'warmup' || moduleType === 'stretch') return '低强度 / 放松与活动度';
+  if (moduleType === 'activate') return '低到中等强度 / 神经激活';
+  if (moduleType === 'main') return '中等强度 / 动作质量优先';
+  return '舒适可控强度';
+}
+
+function inferTargetRpe(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''} ${raw.reps || ''}`;
+  if (/BFR|血流限制|极轻|无负重/.test(text)) return '5-6';
+  if (/大重量|负重|6-8/.test(text)) return '7-8';
+  if (moduleType === 'warmup' || moduleType === 'stretch') return '2-4';
+  if (moduleType === 'activate') return '4-6';
+  return '6-7';
+}
+
+function inferTempo(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''}`;
+  if (/离心|慢放|控制/.test(text)) return '离心2-3秒，向心稳定发力';
+  if (/静力|保持/.test(text)) return '静力保持，均匀呼吸';
+  if (moduleType === 'warmup' || moduleType === 'stretch') return '缓慢连续，不弹震';
+  return '全程可控，避免借力';
+}
+
+function inferProgression(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''}`;
+  if (/BFR|血流限制/.test(text)) return '先完成规定次数与泵感，再小幅增加负荷或张力';
+  if (/单腿|平衡|侧向|抛接球/.test(text)) return '先提高稳定时间和质量，再增加速度、扰动或负重';
+  if (moduleType === 'stretch' || moduleType === 'warmup') return '以活动度和疼痛反应改善为进阶依据';
+  return '连续两次训练完成目标次数且疼痛不升高时小幅进阶';
+}
+
+function inferRegression(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''}`;
+  if (/单腿|平衡|侧向|抛接球/.test(text)) return '减少幅度、改为双腿支撑或增加手扶辅助';
+  if (/深蹲|弓步|倒蹬|腿伸展/.test(text)) return '减少屈膝角度、降低负荷或改为等长版本';
+  if (moduleType === 'main') return '降低负荷、减少组数或缩小动作幅度';
+  return '降低持续时间或改为更舒适版本';
+}
+
+function inferTrackingMetric(raw, moduleType) {
+  const text = `${raw.name || ''} ${raw.tip || ''}`;
+  if (/BFR|血流限制/.test(text)) return '完成质量、疼痛反应、患侧泵感';
+  if (/单腿|平衡|侧向/.test(text)) return '稳定时间、膝内扣次数、疼痛反应';
+  if (/拉伸|泡沫轴|按摩/.test(text) || moduleType === 'stretch' || moduleType === 'warmup') return '活动度改善、压痛变化、训练后反应';
+  return '完成组数、主观用力、疼痛反应';
+}
+
+function normalizePrescription(rawPrescription, rawExercise, moduleType) {
+  const src = asObject(rawPrescription);
+  const exercise = asObject(rawExercise);
+  const name = cleanText(exercise.name);
+  const painCeiling = Number(src.painCeiling);
+  return {
+    movementPattern: normalizeTextBlock(src.movementPattern, inferMovementPattern(name, moduleType)),
+    targetTissue: normalizeTextBlock(src.targetTissue, inferTargetTissue(name, exercise.tags)),
+    intensity: normalizeTextBlock(src.intensity, inferIntensity(exercise, moduleType)),
+    targetRpe: normalizeTextBlock(src.targetRpe, inferTargetRpe(exercise, moduleType)),
+    tempo: normalizeTextBlock(src.tempo, inferTempo(exercise, moduleType)),
+    painCeiling: Number.isFinite(painCeiling) ? Math.max(0, Math.min(10, Math.floor(painCeiling))) : 3,
+    stopCriteria: uniqueStrings(asArray(src.stopCriteria)).length
+      ? uniqueStrings(asArray(src.stopCriteria))
+      : ['疼痛超过3/10', '出现肿胀或不稳感', '动作质量明显下降'],
+    progression: normalizeTextBlock(src.progression, inferProgression(exercise, moduleType)),
+    regression: normalizeTextBlock(src.regression, inferRegression(exercise, moduleType)),
+    trackingMetric: normalizeTextBlock(src.trackingMetric, inferTrackingMetric(exercise, moduleType)),
+  };
+}
+
+function normalizePlanCoaching(rawCoaching, rawPlan, groupId) {
+  const coaching = asObject(rawCoaching);
+  const name = cleanText(rawPlan?.name);
+  const isRest = groupId === 'restday' || /休息|恢复|rest/i.test(name);
+  return {
+    objective: normalizeTextBlock(
+      coaching.objective,
+      isRest ? '降低疲劳、恢复活动度并维持训练连续性' : '在保护膝关节的前提下提升力量、控制与训练容量'
+    ),
+    frequency: normalizeTextBlock(coaching.frequency, isRest ? '穿插在训练日之间或疲劳较高时执行' : '按周计划执行，疼痛/肿胀异常时优先降级或休息'),
+    progressionRule: normalizeTextBlock(coaching.progressionRule, '连续两次完成目标量且疼痛不超过3/10时，再增加负荷、次数或动作复杂度'),
+    safetyRule: normalizeTextBlock(coaching.safetyRule, '训练中避免膝内扣、明显代偿、关节肿胀和失稳感'),
+    readinessCriteria: uniqueStrings(asArray(coaching.readinessCriteria)).length
+      ? uniqueStrings(asArray(coaching.readinessCriteria))
+      : ['静息疼痛≤2/10', '训练后24小时无明显肿胀', '动作质量可控'],
+  };
+}
+
+function normalizeGroupCoaching(rawCoaching, groupId) {
+  const coaching = asObject(rawCoaching);
+  const defaults = {
+    stage1: {
+      phaseGoal: '恢复基础活动度、股四头肌激活和低风险力量耐受',
+      progressCriteria: ['静息疼痛≤2/10', '训练后24小时无明显肿胀', '基础深蹲/倒蹬力线稳定'],
+      caution: '避免高冲击、快速变向和疼痛驱动的硬顶训练',
+    },
+    stage2: {
+      phaseGoal: '建立单腿力量、动态稳定、抗旋控制和渐进负荷能力',
+      progressCriteria: ['单腿动作膝盖稳定', '训练容量可恢复', '左右侧主观控制差距缩小'],
+      caution: '速度、深度、负荷每次只进阶一个变量',
+    },
+    restday: {
+      phaseGoal: '恢复疲劳、维持活动度并监控疼痛/肿胀反应',
+      progressCriteria: ['疲劳下降', '活动度恢复', '下一次训练准备度提升'],
+      caution: '休息日不追求训练刺激，优先恢复质量',
+    },
+  };
+  const base = defaults[groupId] || {
+    phaseGoal: '保持训练连续性并逐步提高动作质量',
+    progressCriteria: ['动作质量稳定', '训练后反应可控'],
+    caution: '按疼痛和恢复情况调整训练量',
+  };
+  return {
+    phaseGoal: normalizeTextBlock(coaching.phaseGoal, base.phaseGoal),
+    progressCriteria: uniqueStrings(asArray(coaching.progressCriteria)).length
+      ? uniqueStrings(asArray(coaching.progressCriteria))
+      : base.progressCriteria,
+    caution: normalizeTextBlock(coaching.caution, base.caution),
+  };
+}
+
 function normalizeExercise(rawExercise, ctx) {
   const raw = asObject(rawExercise);
   const mode = normalizeMode(raw.mode, 'counted');
@@ -140,6 +298,7 @@ function normalizeExercise(rawExercise, ctx) {
       : undefined,
     equipment: uniqueStrings(asArray(raw.equipment)),
     tags: uniqueStrings(asArray(raw.tags)),
+    prescription: normalizePrescription(raw.prescription, raw, ctx.moduleType),
     enrichment,
   };
 
@@ -160,10 +319,12 @@ function normalizeExercise(rawExercise, ctx) {
 function normalizeModule(rawModule, ctx) {
   const raw = asObject(rawModule);
   const moduleId = ensureUniqueId(raw.id || `${ctx.planId}__m${ctx.moduleIndex + 1}`, ctx.usedModuleIds, 'module');
+  const moduleType = cleanText(raw.type) || 'custom';
   const usedExerciseIds = new Set();
   const exercises = asArray(raw.exercises)
     .map((ex, exerciseIndex) => normalizeExercise(ex, {
       moduleId,
+      moduleType,
       exerciseIndex,
       usedExerciseIds,
     }));
@@ -171,7 +332,8 @@ function normalizeModule(rawModule, ctx) {
     id: moduleId,
     name: cleanText(raw.name) || `模块 ${ctx.moduleIndex + 1}`,
     icon: cleanText(raw.icon) || '•',
-    type: cleanText(raw.type) || 'custom',
+    type: moduleType,
+    intent: normalizeTextBlock(raw.intent, moduleType === 'main' ? '主要训练刺激' : '为主训练建立更好的动作状态'),
     exercises,
   };
 }
@@ -190,6 +352,7 @@ function normalizePlan(rawPlan, ctx) {
     name: cleanText(raw.name) || `计划 ${ctx.planIndex + 1}`,
     icon: cleanText(raw.icon) || '🏋️',
     stage: cleanText(raw.stage || raw.groupId || ctx.groupId) || ctx.groupId || 'custom',
+    coaching: normalizePlanCoaching(raw.coaching, raw, cleanText(raw.stage || raw.groupId || ctx.groupId) || ctx.groupId || 'custom'),
     modules,
   };
 }
@@ -212,6 +375,7 @@ function normalizeGroup(rawGroup, ctx) {
     color: cleanText(raw.color),
     gradient: cleanText(raw.gradient),
     order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : ctx.groupIndex + 1,
+    coaching: normalizeGroupCoaching(raw.coaching, id),
     plans,
   };
 }
@@ -227,6 +391,7 @@ function stageToGroup(stage) {
     color: stage.color,
     gradient: stage.gradient,
     order: Number(stage.order) || 1,
+    coaching: normalizeGroupCoaching(stage.coaching, stage.id),
     plans: [],
   };
 }
@@ -245,6 +410,7 @@ function ensureGroup(catalog, groupInfo) {
     color: cleanText(groupInfo.color),
     gradient: cleanText(groupInfo.gradient),
     order: Number.isFinite(Number(groupInfo.order)) ? Number(groupInfo.order) : 999,
+    coaching: normalizeGroupCoaching(groupInfo.coaching, id),
     plans: [],
   };
   catalog.planGroups.push(group);
@@ -303,6 +469,17 @@ function normalizeRuntime(rawRuntime) {
         completedPlan: !!item.completedPlan,
       };
     }).filter(item => item.date && item.planId),
+    readinessLogs: asArray(runtime.readinessLogs).map((entry) => {
+      const item = asObject(entry);
+      return {
+        date: cleanText(item.date),
+        pain: Number.isFinite(Number(item.pain)) ? Math.max(0, Math.min(10, Math.floor(Number(item.pain)))) : null,
+        swelling: cleanText(item.swelling),
+        fatigue: Number.isFinite(Number(item.fatigue)) ? Math.max(0, Math.min(10, Math.floor(Number(item.fatigue)))) : null,
+        sleepQuality: Number.isFinite(Number(item.sleepQuality)) ? Math.max(0, Math.min(10, Math.floor(Number(item.sleepQuality)))) : null,
+        notes: cleanText(item.notes),
+      };
+    }).filter(item => item.date),
     trainingDate: cleanText(runtime.trainingDate),
     trainingSessionStartAt: Number.isFinite(Number(runtime.trainingSessionStartAt))
       ? Number(runtime.trainingSessionStartAt)
@@ -346,6 +523,7 @@ export function createEmptyV7Snapshot() {
       exerciseRest: {},
       calendarLogs: {},
       sessionLogs: [],
+      readinessLogs: [],
       trainingDate: todayStr(),
       trainingSessionStartAt: null,
     },
@@ -417,16 +595,16 @@ export function validateV7Snapshot(rawSnapshot) {
   try {
     const source = asObject(rawSnapshot);
     if (!isObject(source.catalog) || !Array.isArray(source.catalog.planGroups)) {
-      return { ok: false, msg: 'v7 数据缺少 catalog.planGroups' };
+      return { ok: false, msg: 'v8 数据缺少 catalog.planGroups' };
     }
     const snapshot = normalizeV7Snapshot(source);
     const totalPlans = flattenPlansFromCatalog(snapshot.catalog).length;
     if (!totalPlans) {
-      return { ok: false, msg: 'v7 catalog 为空，至少需要 1 个计划' };
+      return { ok: false, msg: 'v8 catalog 为空，至少需要 1 个计划' };
     }
     return { ok: true, snapshot };
   } catch (_err) {
-    return { ok: false, msg: 'v7 数据校验失败，请检查 JSON 结构' };
+    return { ok: false, msg: 'v8 数据校验失败，请检查 JSON 结构' };
   }
 }
 
@@ -668,6 +846,7 @@ export function migrateLegacyStateToV7(options = {}) {
     exerciseRest,
     calendarLogs: normalizeCalendarLogs(legacy.calendarLogs),
     sessionLogs: [],
+    readinessLogs: [],
     trainingDate: cleanText(legacy.trainingDate) || todayStr(),
     trainingSessionStartAt: Number.isFinite(Number(legacy.trainingSessionStartAt))
       ? Number(legacy.trainingSessionStartAt)

@@ -40,6 +40,31 @@ function asPositiveInt(value, fallback) {
   return fallback;
 }
 
+function renderPlanCoaching(plan, stage) {
+  const coaching = plan.coaching || {};
+  const stageCoaching = stage?.coaching || {};
+  const objective = coaching.objective || stageCoaching.phaseGoal || '';
+  const progressionRule = coaching.progressionRule || '';
+  const safetyRule = coaching.safetyRule || stageCoaching.caution || '';
+  if (!objective && !progressionRule && !safetyRule) return '';
+  let html = '<div class="detail-coaching-panel">';
+  if (objective) html += `<div><span>目标</span>${escapeHtml(objective)}</div>`;
+  if (progressionRule) html += `<div><span>进阶</span>${escapeHtml(progressionRule)}</div>`;
+  if (safetyRule) html += `<div><span>安全</span>${escapeHtml(safetyRule)}</div>`;
+  html += '</div>';
+  return html;
+}
+
+function renderPrescriptionLine(prescription) {
+  if (!prescription) return '';
+  const items = [];
+  if (prescription.targetRpe) items.push(`RPE ${prescription.targetRpe}`);
+  if (prescription.painCeiling !== undefined && prescription.painCeiling !== null) items.push(`疼痛≤${prescription.painCeiling}/10`);
+  if (prescription.trackingMetric) items.push(prescription.trackingMetric);
+  if (!items.length) return '';
+  return `<div class="detail-prescription-line">${items.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>`;
+}
+
 function createDefaultExercise(moduleType) {
   if (TIMED_MODULE_TYPES.has(moduleType)) {
     return {
@@ -186,6 +211,7 @@ export function renderDetail() {
   html += `<div class="detail-plan-name">${escapeHtml(plan.name)}</div>`;
   const exCount = modules.reduce((sum, _m, mi) => sum + getModuleExercises(state.currentPlanId, mi, state.plans, {}).length, 0);
   html += `<div class="detail-plan-desc">${modules.length} 个模块 · ${exCount} 个动作</div>`;
+  html += renderPlanCoaching(plan, stage);
   html += '<div class="detail-module-toolbar">';
   html += '<button class="detail-module-main-btn" type="button" data-add-module>+ 新增模块</button>';
   html += '<div class="detail-module-hint">点击模块名称可编辑名称和类型，长按模块头可排序</div>';
@@ -226,6 +252,7 @@ export function renderDetail() {
       html += `<div class="detail-ex-sets">${safeSets}</div>`;
       html += `<div class="detail-ex-edit-tag">${editing ? '收起' : '编辑'}</div>`;
       html += '</div>';
+      html += renderPrescriptionLine(actualEx.prescription);
       html += '<div class="detail-ex-editor">';
       html += '<div class="detail-editor-label">动作名称</div>';
       html += `<input class="detail-ex-edit-name" value="${escapeHtml(actualEx.name)}" data-edit-field="name" />`;

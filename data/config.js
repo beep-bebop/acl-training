@@ -5,8 +5,9 @@ export const STAGES = [
   { id: 'restday', name: '休息日', subtitle: '阶段休', badge: '休', color: '#5856D6', gradient: 'linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)', order: 3 },
 ];
 
-// v7 默认 canonical catalog 文件
-export const CATALOG_V7_FILE = 'data/catalog.v7.json';
+// 最新默认 canonical catalog 文件
+export const CATALOG_V8_FILE = 'data/catalog.v8.json';
+export const CATALOG_V7_FILE = CATALOG_V8_FILE;
 
 // 默认计划 JSON 文件列表
 export const PLAN_FILES = [

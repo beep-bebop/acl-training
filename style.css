@@ -504,6 +504,26 @@ body::after {
 .detail-plan-desc {
   font-size: 13px; color: var(--text3); margin-bottom: 20px;
 }
+.detail-coaching-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,122,255,0.14);
+  background: rgba(0,122,255,0.05);
+}
+.detail-coaching-panel div {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.detail-coaching-panel span {
+  display: inline-flex;
+  margin-right: 6px;
+  color: var(--primary);
+  font-weight: 800;
+}
 .detail-module {
   margin-bottom: 12px; border-radius: var(--radius);
   background: linear-gradient(145deg, rgba(255,255,255,0.74), rgba(255,255,255,0.44));
@@ -644,6 +664,22 @@ body::after {
   padding: 3px 8px;
   background: rgba(0,122,255,0.06);
   flex-shrink: 0;
+}
+.detail-prescription-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px 6px 18px;
+}
+.detail-prescription-line span {
+  border-radius: 999px;
+  background: rgba(0,122,255,0.06);
+  border: 1px solid rgba(0,122,255,0.14);
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 3px 7px;
 }
 .detail-ex-editor {
   display: none;
@@ -1938,6 +1974,13 @@ body::after {
   .detail-ex-sets {
     color: var(--text2) !important;
   }
+  .detail-coaching-panel {
+    background: rgba(10,132,255,0.08) !important;
+    border-color: rgba(10,132,255,0.18) !important;
+  }
+  .detail-coaching-panel div {
+    color: var(--text2) !important;
+  }
   .detail-module {
     background: linear-gradient(145deg, var(--detail-panel), rgba(24,24,36,0.9)) !important;
     border-color: var(--detail-line) !important;
@@ -1960,6 +2003,11 @@ body::after {
   .detail-ex-edit-tag {
     background: rgba(10,132,255,0.12) !important;
     border-color: rgba(10,132,255,0.28) !important;
+  }
+  .detail-prescription-line span {
+    background: rgba(10,132,255,0.1) !important;
+    border-color: rgba(10,132,255,0.2) !important;
+    color: var(--text2) !important;
   }
   .detail-module-main-btn,
   .detail-add-ex-btn {

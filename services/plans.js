@@ -213,7 +213,7 @@ async function loadDefaultSnapshot() {
 
   let snapshot = null;
 
-  // 1) 优先读取 v7 canonical 文件
+  // 1) 优先读取最新 canonical 文件
   try {
     const resp = await fetch(CATALOG_V7_FILE);
     if (resp.ok) {
@@ -227,7 +227,7 @@ async function loadDefaultSnapshot() {
     // fallback to legacy files
   }
 
-  // 2) 若 v7 文件暂无计划，回退到 legacy 默认计划自动升维
+  // 2) 若 canonical 文件暂无计划，回退到 legacy 默认计划自动升维
   if (!snapshot || !flattenPlansFromCatalog(snapshot.catalog).length) {
     const legacyPlans = await fetchLegacyDefaultPlans();
     const catalog = buildCatalogFromLegacyPlans(legacyPlans, STAGES);
@@ -287,8 +287,8 @@ function mergeCalendarLogs(baseLogs, incomingLogs) {
 }
 
 function normalizeIncomingSnapshot(data) {
-  // v7
-  if (isPlainObject(data?.catalog) || data?.version === 7) {
+  // 最新 snapshot
+  if (isPlainObject(data?.catalog) || data?.version === V7_VERSION) {
     const validated = validateV7Snapshot(data);
     return validated.ok ? validated : { ok: false, msg: validated.msg };
   }
@@ -344,7 +344,7 @@ export async function previewRemoteCatalogMerge(sourceUrl = CATALOG_V7_FILE) {
   }
 
   const defaults = createEmptyV7Snapshot();
-  const candidate = isPlainObject(parsed?.catalog) || parsed?.version === 7
+  const candidate = isPlainObject(parsed?.catalog) || parsed?.version === V7_VERSION
     ? parsed
     : {
       version: V7_VERSION,
@@ -353,7 +353,7 @@ export async function previewRemoteCatalogMerge(sourceUrl = CATALOG_V7_FILE) {
       settings: defaults.settings,
     };
   const validated = validateV7Snapshot(candidate);
-  if (!validated.ok) return { ok: false, msg: `远程数据不符合 v7：${validated.msg}` };
+  if (!validated.ok) return { ok: false, msg: `远程数据不符合 v8：${validated.msg}` };
 
   const remoteCatalog = validated.snapshot.catalog;
   const mergedCatalog = mergeRemoteCatalogWithLocalExtras(remoteCatalog, state.catalog);

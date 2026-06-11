@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { summarizeImportSnapshot } from '../components/import-dialog.js';
 
-test('summarizeImportSnapshot counts v7 catalog contents', () => {
+test('summarizeImportSnapshot counts v8 catalog contents', () => {
   const summary = summarizeImportSnapshot({
     catalog: {
       planGroups: [
