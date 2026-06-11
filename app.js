@@ -23,8 +23,7 @@ import { renderCalendar, calPrev, calNext, showDayDetail } from './pages/calenda
 import {
   resetAllData, resetPlansToDefault, copySchemaTemplate, exportPlans,
   exportCurrentPlan, saveAiConfig, clearAiApiKey, hydrateAiConfigInputs,
-  saveGitHubBackupConfig, backupToGitHub, restoreFromGitHub,
-  clearGitHubBackupTokenSetting, setGitHubBackupAutoStatus, initTheme, toggleTheme
+  setGitHubBackupAutoStatus, initTheme, toggleTheme
 } from './pages/settings.js';
 import { showImportDialog, closeImportDialog, previewImport, confirmImport } from './components/import-dialog.js';
 import { showToast } from './utils/helpers.js';
@@ -413,10 +412,6 @@ function setupEventDelegation() {
     if (e.target.closest('[data-copy-schema]')) copySchemaTemplate();
     if (e.target.closest('[data-save-ai-config]')) saveAiConfig();
     if (e.target.closest('[data-clear-ai-key]')) clearAiApiKey();
-    if (e.target.closest('[data-save-github-backup]')) saveGitHubBackupConfig();
-    if (e.target.closest('[data-github-backup-now]')) backupToGitHub();
-    if (e.target.closest('[data-github-restore]')) restoreFromGitHub();
-    if (e.target.closest('[data-clear-github-token]')) clearGitHubBackupTokenSetting();
     if (e.target.closest('[data-notification-permission]')) handleNotificationPermission();
     if (e.target.closest('[data-theme-toggle]')) {
       const newTheme = toggleTheme();
