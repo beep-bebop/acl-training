@@ -1,0 +1,312 @@
+/* ===== 应用外壳与通用工具类 ===== */
+
+/* 移动应用外壳：窄屏全屏，宽屏居中卡片 */
+.app-shell {
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg);
+}
+
+@media (min-width: 768px) {
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent),
+      var(--bg);
+  }
+  .app-shell {
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.app-page {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px calc(96px + var(--sab));
+}
+
+.app-page.no-tabbar {
+  padding-bottom: calc(24px + var(--sab));
+}
+
+/* 页面切换动画 */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* ===== 卡片 ===== */
+.card {
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.card-pad {
+  padding: 16px;
+}
+
+/* ===== 按钮：统一 ≥44px 触控目标 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform var(--dur-fast) ease, opacity var(--dur-fast) ease, background var(--dur-fast) ease;
+  user-select: none;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-1);
+}
+.btn-soft {
+  background: var(--bg-elev-2);
+  color: var(--text-1);
+}
+.btn-danger {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+.btn-block {
+  width: 100%;
+}
+.btn-sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: var(--r-sm);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.icon-btn:active {
+  background: var(--bg-elev-2);
+}
+.icon-btn.danger {
+  color: var(--danger);
+}
+
+/* ===== 文本工具 ===== */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.t-display {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.t-big {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.t-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+.t-cap {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.t-mini {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.t-accent {
+  color: var(--accent);
+}
+
+/* ===== 徽章 / 芯片 ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-elev-2);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.chip-accent {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.chip-outline {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+}
+
+/* 模块类型 / 疼痛分级着色 */
+.mod-warmup { color: var(--mod-warmup); background: color-mix(in srgb, var(--mod-warmup) 13%, transparent); }
+.mod-stretch { color: var(--mod-stretch); background: color-mix(in srgb, var(--mod-stretch) 13%, transparent); }
+.mod-activate { color: var(--mod-activate); background: color-mix(in srgb, var(--mod-activate) 13%, transparent); }
+.mod-main { color: var(--mod-main); background: color-mix(in srgb, var(--mod-main) 13%, transparent); }
+.mod-core { color: var(--mod-core); background: color-mix(in srgb, var(--mod-core) 13%, transparent); }
+.mod-cooldown { color: var(--mod-cooldown); background: color-mix(in srgb, var(--mod-cooldown) 13%, transparent); }
+.mod-cardio { color: var(--mod-cardio); background: color-mix(in srgb, var(--mod-cardio) 13%, transparent); }
+.mod-custom { color: var(--mod-custom); background: color-mix(in srgb, var(--mod-custom) 13%, transparent); }
+
+.pain-0 { color: var(--pain-0); background: color-mix(in srgb, var(--pain-0) 13%, transparent); }
+.pain-1 { color: var(--pain-1); background: color-mix(in srgb, var(--pain-1) 13%, transparent); }
+.pain-2 { color: var(--pain-2); background: color-mix(in srgb, var(--pain-2) 13%, transparent); }
+.pain-3 { color: var(--pain-3); background: color-mix(in srgb, var(--pain-3) 13%, transparent); }
+.pain-4 { color: var(--pain-4); background: color-mix(in srgb, var(--pain-4) 13%, transparent); }
+
+/* 阶段色（分组容器上通过 style="--stage: <color>" 注入） */
+.stage-text { color: var(--stage, var(--accent)); }
+.stage-bg { background: color-mix(in srgb, var(--stage, var(--accent)) 14%, transparent); }
+.stage-bar { background: var(--stage, var(--accent)); }
+
+/* ===== 分隔与列表 ===== */
+.divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  min-height: 56px;
+}
+
+/* ===== 表单 ===== */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.field-input,
+.field-select,
+.field-textarea {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0 14px;
+  min-height: 46px;
+  width: 100%;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color var(--dur-fast) ease;
+}
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: var(--accent-line);
+}
+.field-textarea {
+  padding: 10px 14px;
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.field-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* ===== 链接化可点击行 ===== */
+.tap-row {
+  width: 100%;
+  text-align: left;
+  transition: background var(--dur-fast) ease;
+  border-radius: var(--r-md);
+}
+.tap-row:active {
+  background: var(--bg-elev-2);
+}
+
+/* ===== Markdown 正文（AI 详解等） ===== */
+.markdown-body {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.markdown-body h5 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-1);
+  margin: 8px 0 4px;
+}
+.markdown-body h5:first-child {
+  margin-top: 0;
+}
+.markdown-body ul {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.markdown-body code {
+  background: var(--bg-elev-3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+/* ===== 动画关键帧 ===== */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 var(--accent-line); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flash-overlay {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
