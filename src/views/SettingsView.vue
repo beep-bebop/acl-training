@@ -53,16 +53,12 @@ const backupBusy = ref(false);
 async function saveBackupConfig() {
   settings.patchBackup(backupForm.value);
   saveBackupToken(token.value.trim());
-  ui.toast('备份配置已保存', 'success');
-}
-async function backupNow() {
-  settings.patchBackup(backupForm.value);
-  saveBackupToken(token.value.trim());
   backupBusy.value = true;
   const ok = triggerBackupNow();
-  if (!ok) ui.toast('请先填写备份配置');
-  setTimeout(() => (backupBusy.value = false), 800);
-  ui.toast(ok ? '已触发备份（结果见状态）' : '备份未配置', ok ? 'success' : undefined);
+  if (!ok) {
+    ui.toast('已保存配置；填写 Token 后将自动备份');
+  }
+  setTimeout(() => (backupBusy.value = false), 600);
 }
 async function restoreBackup() {
   const ok = await ui.confirmAsync({
@@ -206,44 +202,47 @@ async function wipeLogs() {
     <!-- 备份 -->
     <div class="card card-pad sec">
       <div class="sec-head">
-        <h3>GitHub 数据备份</h3>
+        <h3>GitHub 自动备份</h3>
         <span v-if="settings.backup.lastStatus" class="t-mini">{{ settings.backup.lastStatus }}</span>
       </div>
       <p class="t-mini" style="margin-top: -6px">
-        数据保存到独立的 GitHub 私有仓库（fine-grained token 只授权该仓库）。本地浏览器数据易丢失，强烈建议配置。
+        每次修改自动备份到你的私有仓库 <b>beep-bebop/acl-training-data</b>。粘贴一次 Token 即可，此后全自动（含换新手机时从备份恢复）。
       </p>
-      <div class="bk-grid">
-        <div class="field">
-          <span class="field-label">Owner</span>
-          <input v-model="backupForm.owner" class="field-input" placeholder="beep-bebop" />
-        </div>
-        <div class="field">
-          <span class="field-label">数据仓库</span>
-          <input v-model="backupForm.repo" class="field-input" placeholder="acl-training-data" />
-        </div>
-        <div class="field">
-          <span class="field-label">分支</span>
-          <input v-model="backupForm.branch" class="field-input" />
-        </div>
-        <div class="field">
-          <span class="field-label">文件路径</span>
-          <input v-model="backupForm.path" class="field-input" />
-        </div>
-      </div>
       <div class="field">
-        <span class="field-label">Token（仅保存在本机）</span>
+        <span class="field-label">Token（fine-grained，只授权 acl-training-data 仓库 · Contents 读写 · 仅保存在本机）</span>
         <input v-model="token" type="password" class="field-input" placeholder="github_pat_…" autocomplete="off" />
+        <span class="t-mini">没有 Token？在 GitHub → Settings → Developer settings → Fine-grained tokens 生成，权限选 Contents: Read and write</span>
       </div>
       <div class="setting-row">
         <div class="sr-text"><span class="sr-title">保存后自动备份</span></div>
         <ToggleSwitch v-model="backupForm.auto" />
       </div>
       <div class="bk-actions">
-        <button class="btn btn-ghost" style="flex: 1" @click="saveBackupConfig">保存配置</button>
-        <button class="btn btn-primary" style="flex: 1" :disabled="backupBusy" @click="backupNow">
-          <AppIcon name="sync" :size="16" /> 立即备份
+        <button class="btn btn-primary" style="flex: 1" :disabled="backupBusy" @click="saveBackupConfig">
+          保存并立即备份
         </button>
       </div>
+      <details class="bk-advanced">
+        <summary class="t-mini">高级（默认无需修改）</summary>
+        <div class="bk-grid">
+          <div class="field">
+            <span class="field-label">Owner</span>
+            <input v-model="backupForm.owner" class="field-input" />
+          </div>
+          <div class="field">
+            <span class="field-label">数据仓库</span>
+            <input v-model="backupForm.repo" class="field-input" />
+          </div>
+          <div class="field">
+            <span class="field-label">分支</span>
+            <input v-model="backupForm.branch" class="field-input" />
+          </div>
+          <div class="field">
+            <span class="field-label">文件路径</span>
+            <input v-model="backupForm.path" class="field-input" />
+          </div>
+        </div>
+      </details>
       <button class="btn btn-soft btn-block" @click="restoreBackup">
         <AppIcon name="download" :size="16" /> 从备份恢复
       </button>
@@ -358,6 +357,18 @@ async function wipeLogs() {
 }
 .time-input:disabled {
   opacity: 0.4;
+}
+.bk-advanced {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+}
+.bk-advanced summary {
+  cursor: pointer;
+  user-select: none;
+}
+.bk-advanced .bk-grid {
+  margin-top: 12px;
 }
 .bk-grid {
   display: grid;

@@ -213,7 +213,16 @@ export function defaultSettings() {
     dailyReminder: { enabled: false, time: '19:00' },
     deloadReminder: true,
     ai: { apiKey: '', model: 'deepseek-v4-flash' },
-    backup: { owner: '', repo: '', branch: 'main', path: 'acl-training-backup.json', auto: true, lastBackupAt: '', lastStatus: '' }
+    // 备份仓库已预置：新设备只需粘贴一次 fine-grained Token 即全自动备份
+    backup: {
+      owner: 'beep-bebop',
+      repo: 'acl-training-data',
+      branch: 'main',
+      path: 'acl-training-backup.json',
+      auto: true,
+      lastBackupAt: '',
+      lastStatus: ''
+    }
   };
 }
 
@@ -252,12 +261,16 @@ export function normalizeSnapshot(raw, legacyStageDefs = []) {
   };
 
   const s = raw.settings || {};
+  const mergedBackup = { ...defaultSettings().backup, ...(s.backup || s.githubBackup || {}) };
+  // 迁移旧数据时，空配置回落到预置仓库
+  if (!String(mergedBackup.owner || '').trim()) mergedBackup.owner = defaultSettings().backup.owner;
+  if (!String(mergedBackup.repo || '').trim()) mergedBackup.repo = defaultSettings().backup.repo;
   const settings = {
     ...defaultSettings(),
     ...pick(s, ['theme', 'vibrate', 'autoRest', 'deloadReminder']),
     dailyReminder: { ...defaultSettings().dailyReminder, ...(s.dailyReminder || {}) },
     ai: { ...defaultSettings().ai, ...(s.ai || s.aiConfig ? { ...(s.ai || {}), ...(s.aiConfig ? { apiKey: s.aiConfig.deepseekApiKey || '', model: s.aiConfig.deepseekModel || 'deepseek-v4-flash' } : {}) } : {}) },
-    backup: { ...defaultSettings().backup, ...(s.backup || s.githubBackup || {}) }
+    backup: mergedBackup
   };
   if (!['dark', 'light', 'system'].includes(settings.theme)) settings.theme = 'dark';
 
