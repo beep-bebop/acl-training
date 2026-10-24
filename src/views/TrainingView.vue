@@ -279,6 +279,10 @@ function onBack() {
   flex-direction: column;
   gap: 12px;
 }
+/* flex 子项禁止收缩：内容超出时撑出滚动，而不是被压缩裁剪 */
+.train-body > :deep(*) {
+  flex-shrink: 0;
+}
 .all-done {
   display: flex;
   align-items: center;

@@ -231,6 +231,10 @@ const exportOpen = ref(false);
   flex-direction: column;
   gap: 16px;
 }
+/* flex 子项禁止收缩：内容超出时撑出滚动 */
+.wb-main > :deep(*) {
+  flex-shrink: 0;
+}
 .wb-card {
   background: var(--bg-elev-1);
   border: 1px solid var(--border);
