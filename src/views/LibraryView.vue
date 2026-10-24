@@ -122,6 +122,10 @@ async function addGroup() {
         <h1 class="t-display">计划库</h1>
         <p class="t-cap">{{ catalog.planGroups.length }} 个阶段 · {{ catalog.planCount }} 个计划 · {{ catalog.exerciseCount }} 个动作</p>
       </div>
+      <router-link to="/workbench" class="wb-entry">
+        <AppIcon name="braces" :size="16" />
+        工作台
+      </router-link>
     </div>
 
     <EmptyState
@@ -247,6 +251,33 @@ async function addGroup() {
 <style scoped>
 .lib-hero {
   margin-bottom: 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* 工作台入口：仅桌面宽度显示（工作台需要三栏空间） */
+.wb-entry {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--r-md);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: transform var(--dur-fast) ease;
+}
+.wb-entry:active {
+  transform: scale(0.96);
+}
+@media (min-width: 1024px) {
+  .wb-entry {
+    display: inline-flex;
+  }
 }
 .group {
   margin-bottom: 22px;
