@@ -22,16 +22,18 @@ export const useTrainingStore = defineStore('training', {
 
   actions: {
     start(plan) {
-      const firstModule = plan.modules?.[0];
+      // 训练开始时展开全部模块：完整呈现整节计划（可点击模块头折叠）
+      const openModules = {};
+      for (const mod of plan.modules || []) openModules[mod.id] = true;
       this.session = {
         planId: plan.id,
         planName: plan.name,
         date: todayKey(),
         startedAt: Date.now(),
         progress: {},
-        openModules: firstModule ? { [firstModule.id]: true } : {},
+        openModules,
         adopted: {},
-        focusExId: firstModule?.exercises?.[0]?.id || null
+        focusExId: plan.modules?.[0]?.exercises?.[0]?.id || null
       };
       this.rest = null;
     },
